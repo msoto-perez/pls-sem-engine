@@ -1,3 +1,7 @@
+# Version: 1.0.3
+# Date: 2026-02-15
+# Stable release for SoftwareX submission
+
 #################################################
 # PLS-SEM ENGINE (Reflective Measurement, Mode A)
 #
@@ -29,9 +33,19 @@ pls_engine <- function(data,
                        max_iter = 300,
                        tol = 1e-6) {
   
-  X <- scale(as.matrix(data))
+  X_raw <- as.matrix(data)
+  X <- scale(X_raw)
+  
+  if (any(is.na(X))) {
+    stop("Scaling produced NA values. Check for zero-variance indicators.")
+  }
+  
   blocks <- measurement_model
   constructs <- names(blocks)
+  
+  # Store outer weights for prediction (PLSpredict)
+  outer_weights <- vector("list", length(blocks))
+  names(outer_weights) <- constructs
   
   # --- Latent variable score initialization
   scores <- sapply(blocks, function(items) {
@@ -56,7 +70,12 @@ pls_engine <- function(data,
       if (all(is.na(w))) next
       
       w <- w / sqrt(sum(w^2))
+      
+      # Save outer weights
+      outer_weights[[j]] <- w
+      
       scores[, j] <- X[, items, drop = FALSE] %*% w
+      
     }
     
     scores <- scale(scores)
@@ -115,7 +134,8 @@ pls_engine <- function(data,
     scores = scores,
     loadings = loadings,
     paths = paths,
-    r2 = r2
+    r2 = r2,
+    outer_weights = outer_weights
   )
 }
 #################################################
@@ -172,13 +192,11 @@ bootstrap_paths <- function(data,
 #################################################
 # COMMON METHOD BIAS (Full collinearity VIF)
 #################################################
-# Common Method Bias assessment using full collinearity VIF
-# as proposed by Kock (2015).
-#
-# Each latent variable is regressed on all others to compute
-# variance inflation factors (VIF).
+# Full collinearity VIF following Kock (2015).
+# Values above 3.3 may indicate potential common method bias.
+# No automatic classification is applied.
 
-compute_cmb_vif <- function(scores) {
+compute_cmb_vif <- function(scores, digits = 2) {
   
   constructs <- colnames(scores)
   vif <- numeric(length(constructs))
@@ -196,12 +214,68 @@ compute_cmb_vif <- function(scores) {
   
   data.frame(
     Construct = constructs,
-    VIF = round(vif, 2),
-    CMB = ifelse(vif < 3.3, "Below recommended threshold", "Above recommended threshold"),
+    VIF = round(vif, digits),
     row.names = NULL
   )
 }
 
+#################################################
+# HTMT (Heterotrait-Monotrait Ratio)
+#################################################
+# HTMT is computed following Henseler et al. (2015).
+# It is defined as the ratio of:
+# - the mean of heterotrait-heteromethod correlations
+# - to the geometric mean of monotrait-heteromethod correlations.
+#
+# No threshold-based classification is applied.
+
+compute_htmt <- function(data, measurement_model, digits = 2) {
+  
+  X <- scale(as.matrix(data))
+  constructs <- names(measurement_model)
+  
+  htmt_matrix <- matrix(NA,
+                        nrow = length(constructs),
+                        ncol = length(constructs))
+  
+  rownames(htmt_matrix) <- constructs
+  colnames(htmt_matrix) <- constructs
+  
+  for (i in seq_along(constructs)) {
+    for (j in seq_along(constructs)) {
+      
+      if (i >= j) next
+      
+      items_i <- measurement_model[[constructs[i]]]
+      items_j <- measurement_model[[constructs[j]]]
+      
+      # Heterotrait correlations
+      cor_ij <- abs(cor(X[, items_i],
+                        X[, items_j],
+                        use = "pairwise.complete.obs"))
+      
+      mean_hetero <- mean(cor_ij, na.rm = TRUE)
+      
+      # Monotrait correlations (within construct)
+      cor_ii <- abs(cor(X[, items_i],
+                        use = "pairwise.complete.obs"))
+      cor_jj <- abs(cor(X[, items_j],
+                        use = "pairwise.complete.obs"))
+      
+      mean_mono_i <- mean(cor_ii[lower.tri(cor_ii)], na.rm = TRUE)
+      mean_mono_j <- mean(cor_jj[lower.tri(cor_jj)], na.rm = TRUE)
+      
+      htmt_value <- mean_hetero / sqrt(mean_mono_i * mean_mono_j)
+      
+      htmt_matrix[i, j] <- htmt_value
+      htmt_matrix[j, i] <- htmt_value
+    }
+  }
+  
+  diag(htmt_matrix) <- NA
+  
+  round(htmt_matrix, digits)
+}
 
 #################################################
 # PLSpredict
@@ -232,13 +306,36 @@ plspredict <- function(data,
     
     model <- pls_engine(train, measurement_model, structural_model)
     
+    # Standardize test data using training mean and sd
+    X_train <- scale(as.matrix(train))
+    X_test  <- scale(as.matrix(test),
+                     center = attr(X_train, "scaled:center"),
+                     scale  = attr(X_train, "scaled:scale"))
+    
+    # Compute latent scores for test data using training outer weights
+    test_scores <- matrix(NA,
+                          nrow = nrow(X_test),
+                          ncol = length(measurement_model))
+    
+    colnames(test_scores) <- names(measurement_model)
+    
+    for (j in seq_along(measurement_model)) {
+      
+      items <- measurement_model[[j]]
+      w <- model$outer_weights[[j]]
+      
+      test_scores[, j] <- X_test[, items, drop = FALSE] %*% w
+    }
+    
+    test_scores <- scale(test_scores)
+    
     for (f in structural_model) {
       
       lhs <- as.character(f[[2]])
       rhs <- all.vars(f[[3]])
       if (length(rhs) == 0) next
       
-      y_hat <- as.matrix(model$scores[, rhs, drop = FALSE]) %*%
+      y_hat <- as.matrix(test_scores[, rhs, drop = FALSE]) %*%
         model$paths[[lhs]]
       
       inds <- measurement_model[[lhs]]
@@ -248,20 +345,38 @@ plspredict <- function(data,
         lambda <- model$loadings[ind, lhs]
         if (is.na(lambda)) next
         
-        # PLS prediction
-        y_pls <- as.numeric(y_hat * lambda)
+        # PLS prediction (standardized scale)
+        y_pls_std <- as.numeric(y_hat * lambda)
+        
+        # Re-scale to original indicator scale using TRAIN statistics
+        mean_train <- mean(train[[ind]], na.rm = TRUE)
+        sd_train   <- sd(train[[ind]], na.rm = TRUE)
+        
+        y_pls <- y_pls_std * sd_train + mean_train
+        
         y_obs <- test[[ind]]
+        
         rmse_pls <- sqrt(mean((y_obs - y_pls)^2, na.rm = TRUE))
         
         # LM benchmark (latent-score based)
+        
+        # Training data for LM
         df_train <- data.frame(
           y = train[[ind]],
           model$scores[, rhs, drop = FALSE]
         )
+        
         lm_fit <- lm(y ~ ., data = df_train)
         
-        df_test <- data.frame(model$scores[, rhs, drop = FALSE])
+        # Test data for LM (use test_scores)
+        df_test <- data.frame(
+          test_scores[, rhs, drop = FALSE]
+        )
+        
+        colnames(df_test) <- colnames(model$scores[, rhs, drop = FALSE])
+        
         y_lm <- predict(lm_fit, newdata = df_test)
+        
         rmse_lm <- sqrt(mean((y_obs - y_lm)^2, na.rm = TRUE))
         
         results[[length(results) + 1]] <- data.frame(
@@ -292,7 +407,11 @@ plspredict <- function(data,
       })
   )
   
-  table5$Q2_predict <- 1 - (table5$RMSE_PLS^2 / table5$RMSE_LM^2)
+  table5$Q2_predict <- ifelse(
+    table5$RMSE_LM == 0,
+    NA,
+    1 - (table5$RMSE_PLS^2 / table5$RMSE_LM^2)
+  )
   
   # Warning is issued only when Q²_predict is negative,
   # indicating that PLS predictions are outperformed
@@ -377,7 +496,9 @@ pls_sem <- function(data,
       lambda <- engine$loadings[items, cn]
       lambda2 <- lambda^2
       
-      CR <- (sum(lambda))^2 / ((sum(lambda))^2 + sum(1 - lambda2))
+      den <- (sum(lambda))^2 + sum(1 - lambda2)
+      CR <- ifelse(den == 0, NA, (sum(lambda))^2 / den)
+      
       AVE <- mean(lambda2)
       
       data.frame(
@@ -390,10 +511,9 @@ pls_sem <- function(data,
   )
   
   # =====================
-  # Table 3 – HTMT (proxy)
+  # Table 3 – HTMT
   # =====================
-  table3 <- round(cor(engine$scores), digits)
-  diag(table3) <- NA
+  table3 <- compute_htmt(data, measurement_model, digits)
   
   # =====================
   # Table 4
