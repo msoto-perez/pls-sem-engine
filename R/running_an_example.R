@@ -1,7 +1,7 @@
 # Example script to reproduce a full PLS-SEM workflow
 # using simulated data (N = 300).
 
-source("pls_engine_v1.0.4.R")
+source("pls_engine.R")
 
 # =====================
 # SIMULATED DATA
@@ -84,4 +84,5 @@ htmt_item_diagnostics(model)
 
 # Warnings
 model$warnings
+
 
