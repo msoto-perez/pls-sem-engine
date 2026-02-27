@@ -3,9 +3,9 @@
 A transparent PLS-SEM engine for reflective measurement models (Mode A)
 implemented in base R.
 
-**Current version:** v1.0.4  
+**Current version:** v1.0.6  
 **Repository:** https://github.com/msoto-perez/pls-sem-engine  
-**DOI (Zenodo archive):** https://doi.org/10.5281/zenodo.18794941 
+**DOI (Zenodo archive):** https://doi.org/10.5281/zenodo.18795215  
 **License:** MIT
 
 ------------------------------------------------------------------------
@@ -150,8 +150,8 @@ software version used.
 If you use this software, please cite:
 
 Soto-Pérez, M. (2026).  
-pls-sem-engine (Version 1.0.4) [Software].  
-Zenodo. https://doi.org/10.5281/zenodo.18794941
+pls-sem-engine (Version 1.0.6) [Software].  
+Zenodo. https://doi.org/10.5281/zenodo.18795215
 
 ------------------------------------------------------------------------
 
