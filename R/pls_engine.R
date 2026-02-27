@@ -1,6 +1,6 @@
-# Version: 1.0.4
-# Date: 2026-02-15
-# Stable release for SoftwareX submission
+# Version: 1.0.6
+# Date: 2026-02-26
+# Final symmetric release for SoftwareX submission
 
 #################################################
 # PLS-SEM ENGINE (Reflective Measurement, Mode A)
@@ -749,4 +749,5 @@ get_references <- function() {
     stringsAsFactors = FALSE
   )
 }
+
 
