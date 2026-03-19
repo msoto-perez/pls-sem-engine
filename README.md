@@ -1,160 +1,188 @@
-# pls-sem-engine
+PLSSEMENGINE: A TRANSPARENT PLS-SEM ENGINE IN BASE R
 
-A transparent PLS-SEM engine for reflective measurement models (Mode A)
-implemented in base R.
 
-**Current version:** v1.0.6  
-**Repository:** https://github.com/msoto-perez/pls-sem-engine  
-**DOI (Zenodo archive):** https://doi.org/10.5281/zenodo.18795215  
-**License:** MIT
 
-------------------------------------------------------------------------
+Version: 1.1.0 (2026-03-19)
 
-## 1. Purpose
+Repository: https://github.com/msoto-perez/pls-sem-engine
 
-`pls-sem-engine` provides a transparent and reproducible implementation
-of Partial Least Squares Structural Equation Modeling (PLS-SEM)
-restricted to reflective measurement models (Mode A).
+DOI (Zenodo): https://doi.org/10.5281/zenodo.18795215
 
-The software was developed to prioritize:
+License: MIT
 
--   Algorithmic transparency\
--   Explicit analytical control\
--   Reproducibility\
--   Clear separation between estimation, inference, and prediction
 
-The engine avoids automated model re-specification, heuristic threshold
-classifications, and interpretative flags.
 
-------------------------------------------------------------------------
+\--------------------------------------------------
 
-## 2. Computational Workflow
+1\. PURPOSE
 
-The engine follows a modular workflow:
+\--------------------------------------------------
 
-1.  Data standardization\
-2.  Iterative Mode A latent variable score estimation\
-3.  Measurement model evaluation\
-4.  Structural model estimation via ordinary least squares\
-5.  Bootstrap inference (observation-level resampling)\
-6.  k-fold cross-validation for predictive assessment
+plssemengine provides a transparent, modular, and reproducible
 
-All computations are implemented using base R matrix operations.
+implementation of Partial Least Squares Structural Equation
 
-Deterministic sign alignment is applied after convergence to ensure
-reproducible latent variable orientation.
+Modeling (PLS-SEM). It is specifically designed for
 
-------------------------------------------------------------------------
+reflective measurement models (Mode A).
 
-## 3. Scope
 
-### Supported
 
--   Reflective measurement models (Mode A)\
--   Bootstrap confidence intervals for structural coefficients\
--   HTMT discriminant validity assessment\
--   Full collinearity variance inflation factors (VIF)\
--   Predictive evaluation via k-fold cross-validation\
--   Paper-ready tabular outputs
+The software prioritizes:
 
-### Not Supported (by design)
+\- Algorithmic transparency via pure base R matrix operations.
 
--   Formative measurement models (Mode B)\
--   Automatic mediation or moderation testing\
--   Automatic model re-specification\
--   Multigroup analysis\
--   Measurement invariance testing
+\- Explicit analytical control without hidden heuristics.
 
-These restrictions are intentional to preserve methodological clarity
-and researcher control.
+\- Modular separation between estimation, inference, and prediction.
 
-------------------------------------------------------------------------
 
-## 4. Installation
 
-Clone the repository:
+\--------------------------------------------------
 
-    git clone https://github.com/msoto-perez/pls-sem-engine
+2\. COMPUTATIONAL WORKFLOW
 
-The engine requires only base R and has no external dependencies.
+\--------------------------------------------------
 
-------------------------------------------------------------------------
+The engine implements a standardized PLS-SEM pipeline:
 
-## 5. Minimal Example
+\- Data standardization.
 
-To test the engine immediately, you can run this self-contained example with simulated data:
+\- Iterative Mode A estimation (Factorial/Centroid schemes).
 
-```r
-source("pls_engine_v1.0.4.R")
+\- Measurement model evaluation (Loadings, CR, AVE, HTMT).
 
-# 1. Generate dummy data (n=100)
+\- Structural model estimation via OLS.
+
+\- Bootstrap inference for path coefficients.
+
+\- k-fold cross-validation (PLSpredict).
+
+
+
+Note: Deterministic sign alignment is available but disabled by
+
+default to preserve bootstrap distribution integrity.
+
+
+
+\--------------------------------------------------
+
+3\. WHAT'S NEW IN V1.1.0
+
+\--------------------------------------------------
+
+\- Added f-squared (f2) effect size calculation.
+
+\- Implemented native plotting functions (plot\_model\_results).
+
+\- Fixed composite variance to 1 (Wold, 1982).
+
+\- Added support for multiple inner weighting schemes.
+
+
+
+\--------------------------------------------------
+
+4\. MINIMAL EXAMPLE (Copy-paste ready)
+
+\--------------------------------------------------
+
+
+
+source("pls\_engine.R")
+
+
+
+\# 1. Generate data
+
 set.seed(123)
+
 data <- data.frame(
-  SQ1 = rnorm(100), SQ2 = rnorm(100), SQ3 = rnorm(100),
-  CS1 = rnorm(100), CS2 = rnorm(100), CS3 = rnorm(100),
-  CL1 = rnorm(100), CL2 = rnorm(100), CL3 = rnorm(100)
+
+&#x20; SQ1=rnorm(100), SQ2=rnorm(100), SQ3=rnorm(100),
+
+&#x20; CS1=rnorm(100), CS2=rnorm(100), CS3=rnorm(100),
+
+&#x20; CL1=rnorm(100), CL2=rnorm(100), CL3=rnorm(100)
+
 )
 
-# 2. Define Measurement Model (List of blocks)
-measurement_model <- list(
-  Service_Quality       = c("SQ1", "SQ2", "SQ3"),
-  Customer_Satisfaction = c("CS1", "CS2", "CS3"),
-  Customer_Loyalty      = c("CL1", "CL2", "CL3")
+
+
+\# 2. Define Models
+
+mm <- list(
+
+&#x20; Quality = c("SQ1", "SQ2", "SQ3"),
+
+&#x20; Satisfaction = c("CS1", "CS2", "CS3"),
+
+&#x20; Loyalty = c("CL1", "CL2", "CL3")
+
 )
 
-# 3. Define Structural Model (Formula syntax)
-structural_model <- list(
-  Customer_Satisfaction ~ Service_Quality,
-  Customer_Loyalty      ~ Customer_Satisfaction + Service_Quality
+
+
+sm <- list(
+
+&#x20; Satisfaction \~ Quality,
+
+&#x20; Loyalty \~ Satisfaction + Quality
+
 )
 
-# 4. Run PLS-SEM Analysis
-model <- pls_sem(
-  data = data,
-  measurement_model = measurement_model,
-  structural_model = structural_model,
-  nboot = 500,
-  k = 5
-)
 
-# 5. Inspect Results
-print(model$path_coefficients)
-print(model$reliability)
 
-------------------------------------------------------------------------
+\# 3. Run Analysis
 
-## 6. Numerical Validation
+model <- pls\_sem(data=data, measurement\_model=mm, structural\_model=sm)
 
-The engine was numerically validated against the established `plspm`
-implementation.
 
-Absolute differences in path coefficients and R² values were
-consistently below 0.003, confirming computational consistency.
 
-------------------------------------------------------------------------
+\# 4. Results \& Plots
 
-## 7. Reproducibility
+model$tables$table4  # Structural Paths \& f2
 
--   Version controlled via Git\
--   Archived via Zenodo DOI\
--   Deterministic sign alignment implemented\
--   Explicit seed control for bootstrap and cross-validation
+plot\_model\_results(model)
 
-This ensures traceability between published results and the exact
-software version used.
 
-------------------------------------------------------------------------
 
-## 8. Citation
+\--------------------------------------------------
+
+5\. CITATION
+
+\--------------------------------------------------
 
 If you use this software, please cite:
 
-Soto-Pérez, M. (2026).  
-pls-sem-engine (Version 1.0.6) [Software].  
+
+
+Soto-Perez, M. (2026). A transparent PLS-SEM engine for
+
+reflective measurement models in R. SoftwareX.
+
+(Manuscript under review).
+
+
+
+Software archive:
+
+Soto-Perez, M. (2026). plssemengine (Version 1.1.0).
+
 Zenodo. https://doi.org/10.5281/zenodo.18795215
 
-------------------------------------------------------------------------
 
-## 9. Contact
 
-msoto@up.edu.mx
+\--------------------------------------------------
+
+6\. CONTACT
+
+\--------------------------------------------------
+
+Dr. M. Soto-Perez
+
+Email: msoto@up.edu.mx
+
+Universidad Panamericana, Mexico
+

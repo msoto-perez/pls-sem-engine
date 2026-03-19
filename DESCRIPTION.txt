@@ -1,8 +1,8 @@
 Package: plssemengine
 Type: Package
 Title: plssemengine: A Transparent PLS-SEM Engine for Reflective Measurement Models
-Version: 1.0.6
-Date: 2026-02-26
+Version: 1.1.0
+Date: 2026-03-19
 Authors@R: 
     person("Manuel", "Soto-Perez", 
            email = "msoto@up.edu.mx", 
@@ -17,5 +17,4 @@ URL: https://github.com/msoto-perez/pls-sem-engine
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 4.0.0)
-
 Imports:

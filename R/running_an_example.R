@@ -85,4 +85,12 @@ htmt_item_diagnostics(model)
 # Warnings
 model$warnings
 
+# Warnings
+model$warnings
+
+# Plot structural model
+plot_structural_model(structural_model)
+
+# Plot structural model (with results)
+plot_model_results(model)
 
