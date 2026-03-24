@@ -85,12 +85,18 @@ htmt_item_diagnostics(model)
 # Warnings
 model$warnings
 
-# Warnings
-model$warnings
-
-# Plot structural model
+#plot and save structural model
 plot_structural_model(structural_model)
+plot_structural_model(structural_model, save_plot = TRUE, file_name = "conceptual_model.png")
 
-# Plot structural model (with results)
+#plot an save model wirh results
 plot_model_results(model)
+plot_model_results(model, 
+                   box_height = 0.5,
+                   box_width = 1.3,  
+                   cex_node = 0.85,
+                   cex_r2 = 0.40,
+                   cex_beta = 0.80, 
+                   save_plot = TRUE, 
+                   file_name = "model_with_results.png")
 

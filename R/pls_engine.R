@@ -1,5 +1,5 @@
 # Version: 1.1.0
-# Date: 2026-03-19
+# Date: 2026-03-24
 # Final symmetric release for SoftwareX submission
 
 #################################################
@@ -801,213 +801,162 @@ get_references <- function() {
 }
 
 # =====================
-# Plot Structural Model (Base R - Paper Ready)
+# Helper: Exact Boundary Intersection for Rectangles
 # =====================
-# Generates a visual representation of the structural model
-# using only base R graphics, avoiding external dependencies.
-plot_structural_model <- function(structural_model) {
-  
-  # 1. Extract relationships
-  paths <- lapply(structural_model, function(eq) {
-    vars <- all.vars(eq)
-    endogenous <- vars[1]
-    exogenous <- vars[-1]
-    data.frame(from = exogenous, to = endogenous, stringsAsFactors = FALSE)
-  })
-  edges <- do.call(rbind, paths)
-  nodes <- unique(c(edges$from, edges$to))
-  
-  # 2. Positions (Triangle design for mediation)
-  node_pos <- data.frame(name = nodes, x = 0, y = 0, stringsAsFactors = FALSE)
-  
-  for(i in 1:nrow(node_pos)) {
-    is_from <- node_pos$name[i] %in% edges$from
-    is_to <- node_pos$name[i] %in% edges$to
-    
-    if(is_from & !is_to) { node_pos$x[i] <- 1; node_pos$y[i] <- 0.3 }      # Exogenous
-    else if(is_from & is_to) { node_pos$x[i] <- 2; node_pos$y[i] <- 0.7 }  # Mediator
-    else { node_pos$x[i] <- 3; node_pos$y[i] <- 0.3 }                      # Endogenous
-  }
-  
-  # 3. Canvas
-  plot(0, 0, type = "n", xlim = c(0.5, 3.5), ylim = c(0, 1), 
-       axes = FALSE, xlab = "", ylab = "", main = "")
-  
-  # 4. Draw arrows (drawn first to stay behind boxes)
-  for(i in 1:nrow(edges)) {
-    pos_from <- node_pos[node_pos$name == edges$from[i], ]
-    pos_to <- node_pos[node_pos$name == edges$to[i], ]
-    
-    dx <- pos_to$x - pos_from$x
-    dy <- pos_to$y - pos_from$y
-    angle <- atan2(dy, dx)
-    
-    # Offset adjustment so the arrow touches the exact border of the box
-    offset_x <- 0.45 * cos(angle)
-    offset_y <- 0.15 * sin(angle)
-    
-    arrows(x0 = pos_from$x + offset_x, y0 = pos_from$y + offset_y, 
-           x1 = pos_to$x - offset_x, y1 = pos_to$y - offset_y, 
-           length = 0.12, lwd = 1.5, col = "gray20")
-  }
-  
-  # 5. Perfect rounded rectangle function (Pure Base R)
-  draw_rounded_rect_perfect <- function(xl, yb, xr, yt, radius = 0.15) {
-    # Calculate radius relative to box width and height
-    rx <- (xr - xl) * radius
-    ry <- (yt - yb) * radius * 1.5 # Aspect ratio adjustment
-    
-    res <- 15 # Corner curve resolution
-    
-    # Top Right Corner
-    th_tr <- seq(0, pi/2, length.out = res)
-    x_tr <- (xr - rx) + rx * cos(th_tr)
-    y_tr <- (yt - ry) + ry * sin(th_tr)
-    
-    # Top Left Corner
-    th_tl <- seq(pi/2, pi, length.out = res)
-    x_tl <- (xl + rx) + rx * cos(th_tl)
-    y_tl <- (yt - ry) + ry * sin(th_tl)
-    
-    # Bottom Left Corner
-    th_bl <- seq(pi, 3*pi/2, length.out = res)
-    x_bl <- (xl + rx) + rx * cos(th_bl)
-    y_bl <- (yb + ry) + ry * sin(th_bl)
-    
-    # Bottom Right Corner
-    th_br <- seq(3*pi/2, 2*pi, length.out = res)
-    x_br <- (xr - rx) + rx * cos(th_br)
-    y_br <- (yb + ry) + ry * sin(th_br)
-    
-    # Join all points
-    px <- c(x_tr, x_tl, x_bl, x_br)
-    py <- c(y_tr, y_tl, y_bl, y_br)
-    
-    polygon(px, py, col = "white", border = "black", lwd = 1.5)
-  }
-  
-  # 6. Draw Nodes and Text
-  for(i in 1:nrow(node_pos)) {
-    # Call the perfect box function
-    draw_rounded_rect_perfect(node_pos$x[i] - 0.4, node_pos$y[i] - 0.15, 
-                              node_pos$x[i] + 0.4, node_pos$y[i] + 0.15, 
-                              radius = 0.15)
-    
-    # Clean text
-    clean_name <- gsub("_", "\n", node_pos$name[i])
-    text(node_pos$x[i], node_pos$y[i], labels = clean_name, 
-         cex = 0.9, font = 2, col = "black")
+get_boundary_offset <- function(angle, bw, bh) {
+  if (abs(tan(angle)) < bh/bw) {
+    return(bw / abs(cos(angle)))
+  } else {
+    return(bh / abs(sin(angle)))
   }
 }
 
 # =====================
-# Plot Structural Model with Results (Base R - Refined 2.0)
+# Plot Structural Model (Base R - Pure Rectangles & Export Ready)
 # =====================
-# Extends the structural model plot by overlaying estimated Path Coefficients (Beta)
-# and Coefficients of Determination (R2) directly onto the diagram.
-plot_model_results <- function(model) {
+plot_structural_model <- function(structural_model, layout = NULL, 
+                                  box_width = 1.1, box_height = 0.3, 
+                                  cex_node = 0.9, arr_lwd = 1.2, 
+                                  box_col = "white",
+                                  save_plot = FALSE, file_name = "structural_model.png",
+                                  width = 2500, height = 1500, res = 300) {
   
-  structural_model <- model$structural_model
-  t2 <- model$tables$table2 
-  t4 <- model$tables$table4 
+  if (save_plot) {
+    if (capabilities("cairo")) {
+      png(filename = file_name, width = width, height = height, res = res, type = "cairo")
+    } else {
+      png(filename = file_name, width = width, height = height, res = res)
+    }
+  }
   
   paths <- lapply(structural_model, function(eq) {
-    vars <- all.vars(eq)
-    endogenous <- vars[1]
-    exogenous <- vars[-1]
-    data.frame(from = exogenous, to = endogenous, stringsAsFactors = FALSE)
+    data.frame(from = all.vars(eq)[-1], to = all.vars(eq)[1], stringsAsFactors = FALSE)
   })
   edges <- do.call(rbind, paths)
   nodes <- unique(c(edges$from, edges$to))
   
-  node_pos <- data.frame(name = nodes, x = 0, y = 0, stringsAsFactors = FALSE)
-  for(i in 1:nrow(node_pos)) {
-    is_from <- node_pos$name[i] %in% edges$from
-    is_to <- node_pos$name[i] %in% edges$to
-    if(is_from & !is_to) { node_pos$x[i] <- 1; node_pos$y[i] <- 0.3 }      
-    else if(is_from & is_to) { node_pos$x[i] <- 2; node_pos$y[i] <- 0.7 }  
-    else { node_pos$x[i] <- 3; node_pos$y[i] <- 0.3 }                      
-  }
+  if (is.null(layout)) {
+    n_nodes <- length(nodes)
+    angles <- seq(pi/2, 2*pi + pi/2, length.out = n_nodes + 1)[-(n_nodes + 1)]
+    radius <- max(3.0, n_nodes * 0.7) 
+    node_pos <- data.frame(name = nodes, x = radius * cos(angles), y = radius * sin(angles), stringsAsFactors = FALSE)
+  } else { node_pos <- layout }
   
-  plot(0, 0, type = "n", xlim = c(0.5, 3.5), ylim = c(0, 1), 
+  plot(0, 0, type = "n", 
+       xlim = c(min(node_pos$x) - box_width*1.2, max(node_pos$x) + box_width*1.2), 
+       ylim = c(min(node_pos$y) - box_height*1.5, max(node_pos$y) + box_height*1.5), 
        axes = FALSE, xlab = "", ylab = "", main = "")
   
-  # Draw arrows and shifted Beta texts
   for(i in 1:nrow(edges)) {
     pos_from <- node_pos[node_pos$name == edges$from[i], ]
     pos_to <- node_pos[node_pos$name == edges$to[i], ]
-    
-    dx <- pos_to$x - pos_from$x
-    dy <- pos_to$y - pos_from$y
+    dx <- pos_to$x - pos_from$x; dy <- pos_to$y - pos_from$y
     angle <- atan2(dy, dx)
     
-    offset_x <- 0.45 * cos(angle)
-    offset_y <- 0.15 * sin(angle)
+    d_from <- get_boundary_offset(angle, box_width, box_height) + 0.05
+    d_to <- get_boundary_offset(angle + pi, box_width, box_height) + 0.05
     
-    x0_arr <- pos_from$x + offset_x
-    y0_arr <- pos_from$y + offset_y
-    x1_arr <- pos_to$x - offset_x
-    y1_arr <- pos_to$y - offset_y
+    arrows(x0 = pos_from$x + d_from * cos(angle), y0 = pos_from$y + d_from * sin(angle), 
+           x1 = pos_to$x - d_to * cos(angle), y1 = pos_to$y - d_to * sin(angle), 
+           length = 0.12, lwd = arr_lwd, col = "gray40")
+  }
+  
+  for(i in 1:nrow(node_pos)) {
+    rect(node_pos$x[i]-box_width, node_pos$y[i]-box_height, 
+         node_pos$x[i]+box_width, node_pos$y[i]+box_height, 
+         col=box_col, border="black", lwd=1.5)
+    text(node_pos$x[i], node_pos$y[i], labels = gsub("_", " ", node_pos$name[i]), cex = cex_node, font = 2, col="black")
+  }
+  
+  if (save_plot) {
+    dev.off()
+    message(paste("High-quality plot saved to:", file.path(getwd(), file_name)))
+  }
+}
+
+# =====================
+# Plot Structural Model with Results (Base R - Configurable & Export Ready)
+# =====================
+plot_model_results <- function(model, layout = NULL, 
+                               box_width = 1.1, box_height = 0.3, 
+                               cex_node = 0.9, cex_beta = 0.8, cex_r2 = 0.75,
+                               arr_lwd = 1.2, box_col = "white",
+                               save_plot = FALSE, file_name = "model_results.png",
+                               width = 2500, height = 1500, res = 300) {
+  
+  if (save_plot) {
+    if (capabilities("cairo")) {
+      png(filename = file_name, width = width, height = height, res = res, type = "cairo")
+    } else {
+      png(filename = file_name, width = width, height = height, res = res)
+    }
+  }
+  
+  structural_model <- model$structural_model
+  t2 <- model$tables$table2; t4 <- model$tables$table4 
+  
+  paths <- lapply(structural_model, function(eq) {
+    data.frame(from = all.vars(eq)[-1], to = all.vars(eq)[1], stringsAsFactors = FALSE)
+  })
+  edges <- do.call(rbind, paths)
+  nodes <- unique(c(edges$from, edges$to))
+  
+  if (is.null(layout)) {
+    n_nodes <- length(nodes)
+    angles <- seq(pi/2, 2*pi + pi/2, length.out = n_nodes + 1)[-(n_nodes + 1)]
+    radius <- max(3.0, n_nodes * 0.7) 
+    node_pos <- data.frame(name = nodes, x = radius * cos(angles), y = radius * sin(angles), stringsAsFactors = FALSE)
+  } else { node_pos <- layout }
+  
+  plot(0, 0, type = "n", 
+       xlim = c(min(node_pos$x) - box_width*1.2, max(node_pos$x) + box_width*1.2), 
+       ylim = c(min(node_pos$y) - box_height*1.5, max(node_pos$y) + box_height*1.5), 
+       axes = FALSE, xlab = "", ylab = "", main = "")
+  
+  for(i in 1:nrow(edges)) {
+    pos_from <- node_pos[node_pos$name == edges$from[i], ]
+    pos_to <- node_pos[node_pos$name == edges$to[i], ]
+    dx <- pos_to$x - pos_from$x; dy <- pos_to$y - pos_from$y
+    angle <- atan2(dy, dx)
     
-    arrows(x0 = x0_arr, y0 = y0_arr, x1 = x1_arr, y1 = y1_arr, 
-           length = 0.12, lwd = 1.5, col = "gray20")
+    d_from <- get_boundary_offset(angle, box_width, box_height) + 0.05
+    d_to <- get_boundary_offset(angle + pi, box_width, box_height) + 0.05
+    
+    x0_arr <- pos_from$x + d_from * cos(angle); y0_arr <- pos_from$y + d_from * sin(angle)
+    x1_arr <- pos_to$x - d_to * cos(angle); y1_arr <- pos_to$y - d_to * sin(angle)
+    
+    arrows(x0 = x0_arr, y0 = y0_arr, x1 = x1_arr, y1 = y1_arr, length = 0.12, lwd = arr_lwd, col = "gray40")
     
     beta_val <- t4$`Path Coefficient (β)`[t4$From == edges$from[i] & t4$To == edges$to[i]]
+    mid_x <- (x0_arr + x1_arr)/2; mid_y <- (y0_arr + y1_arr)/2
+    lbl <- paste0("β=", beta_val)
     
-    mid_x <- (x0_arr + x1_arr) / 2
-    mid_y <- (y0_arr + y1_arr) / 2
-    
-    # Simple visual rule based on arrow slope to avoid text overlap
-    if (abs(dy) < 0.01) {
-      # Horizontal arrow
-      text_x <- mid_x
-      text_y <- mid_y + 0.08
-    } else if (dy > 0) {
-      # Arrow pointing up
-      text_x <- mid_x - 0.22
-      text_y <- mid_y + 0.05
-    } else {
-      # Arrow pointing down
-      text_x <- mid_x + 0.22
-      text_y <- mid_y + 0.05
-    }
-    
-    text(text_x, text_y, labels = paste0("β = ", beta_val), 
-         cex = 0.85, font = 3, col = "black")
+    # Text Masking - Expanded significantly to completely cut the arrow line
+    w <- strwidth(lbl, cex=cex_beta) * 0.75 
+    h <- strheight(lbl, cex=cex_beta) * 0.9  
+    rect(mid_x - w, mid_y - h, mid_x + w, mid_y + h, col="white", border=NA)
+    text(mid_x, mid_y, labels = lbl, cex = cex_beta, font = 3, col = "black")
   }
   
-  draw_rounded_rect_perfect <- function(xl, yb, xr, yt, radius = 0.15) {
-    rx <- (xr - xl) * radius
-    ry <- (yt - yb) * radius * 1.5 
-    res <- 15 
-    th_tr <- seq(0, pi/2, length.out = res); x_tr <- (xr - rx) + rx * cos(th_tr); y_tr <- (yt - ry) + ry * sin(th_tr)
-    th_tl <- seq(pi/2, pi, length.out = res); x_tl <- (xl + rx) + rx * cos(th_tl); y_tl <- (yt - ry) + ry * sin(th_tl)
-    th_bl <- seq(pi, 3*pi/2, length.out = res); x_bl <- (xl + rx) + rx * cos(th_bl); y_bl <- (yb + ry) + ry * sin(th_bl)
-    th_br <- seq(3*pi/2, 2*pi, length.out = res); x_br <- (xr - rx) + rx * cos(th_br); y_br <- (yb + ry) + ry * sin(th_br)
-    px <- c(x_tr, x_tl, x_bl, x_br); py <- c(y_tr, y_tl, y_bl, y_br)
-    polygon(px, py, col = "white", border = "black", lwd = 1.5)
-  }
-  
-  # Draw Nodes and Text (Visual hierarchy for R2)
   for(i in 1:nrow(node_pos)) {
-    draw_rounded_rect_perfect(node_pos$x[i] - 0.4, node_pos$y[i] - 0.15, 
-                              node_pos$x[i] + 0.4, node_pos$y[i] + 0.15, 
-                              radius = 0.15)
+    rect(node_pos$x[i]-box_width, node_pos$y[i]-box_height, 
+         node_pos$x[i]+box_width, node_pos$y[i]+box_height, 
+         col=box_col, border="black", lwd=1.5)
     
-    clean_name <- gsub("_", "\n", node_pos$name[i])
+    clean_name <- gsub("_", " ", node_pos$name[i])
     r2_val <- t2$R2[t2$Construct == node_pos$name[i]]
     
+    # Dynamic spacing based on box height to prevent overlaps regardless of resolution
     if(!is.na(r2_val)) {
-      # Main construct text: slightly higher, bold
-      text(node_pos$x[i], node_pos$y[i] + 0.03, labels = clean_name, 
-           cex = 0.9, font = 2, col = "black")
-      # R2 text: slightly lower, smaller, italic, dark gray
-      text(node_pos$x[i], node_pos$y[i] - 0.065, labels = paste0("(R² = ", r2_val, ")"), 
-           cex = 0.75, font = 3, col = "gray30")
+      text(node_pos$x[i], node_pos$y[i] + (box_height * 0.25), labels = clean_name, cex=cex_node, font=2, col="black")
+      text(node_pos$x[i], node_pos$y[i] - (box_height * 0.35), labels = paste0("(R²=", r2_val, ")"), cex=cex_r2, font=3, col="gray30")
     } else {
-      # If no R2, text goes exactly in the center
-      text(node_pos$x[i], node_pos$y[i], labels = clean_name, 
-           cex = 0.9, font = 2, col = "black")
+      text(node_pos$x[i], node_pos$y[i], labels = clean_name, cex=cex_node, font=2, col="black")
     }
+  }
+  
+  if (save_plot) {
+    dev.off()
+    message(paste("High-quality plot saved to:", file.path(getwd(), file_name)))
   }
 }
