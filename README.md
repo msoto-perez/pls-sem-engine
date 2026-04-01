@@ -1,100 +1,74 @@
-PLSSEMENGINE: A TRANSPARENT PLS-SEM ENGINE IN BASE R
+\# PLS-SEM Engine: A Transparent Reflective Engine in Base R 📊
 
 
 
-Version: 1.1.0 (2026-03-24)
+\[!\[DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19120651.svg)](https://doi.org/10.5281/zenodo.19120651)
 
-Repository: https://github.com/msoto-perez/pls-sem-engine
-
-DOI (Zenodo): https://doi.org/10.5281/zenodo.19120651
-
-License: MIT
+\[cite\_start]\*\*Version:\*\* 1.1.0 (2026-03-24) 
 
 
 
-\--------------------------------------------------
-
-1\. PURPOSE
-
-\--------------------------------------------------
-
-plssemengine provides a transparent, modular, and reproducible
-
-implementation of Partial Least Squares Structural Equation
-
-Modeling (PLS-SEM). It is specifically designed for
-
-reflective measurement models (Mode A).
+\[cite\_start]\*\*plssemengine\*\* provides a transparent, modular, and reproducible implementation of Partial Least Squares Structural Equation Modeling (PLS-SEM), specifically designed for \*\*reflective measurement models (Mode A)\*\*. \[cite: 4, 118]
 
 
+
+\## 🌟 Purpose and Philosophy
 
 The software prioritizes:
 
-\- Algorithmic transparency via pure base R matrix operations.
+\* \[cite\_start]\*\*Algorithmic Transparency:\*\* Implementation via pure base R matrix operations. \[cite: 14, 35, 112]
 
-\- Explicit analytical control without hidden heuristics.
+\* \[cite\_start]\*\*Explicit Analytical Control:\*\* No hidden heuristics or automatic re-specifications. \[cite: 7, 34, 119]
 
-\- Modular separation between estimation, inference, and prediction.
-
-
-
-\--------------------------------------------------
-
-2\. COMPUTATIONAL WORKFLOW
-
-\--------------------------------------------------
-
-The engine implements a standardized PLS-SEM pipeline:
-
-\- Data standardization.
-
-\- Iterative Mode A estimation (Factorial/Centroid schemes).
-
-\- Measurement model evaluation (Loadings, CR, AVE, HTMT).
-
-\- Structural model estimation via OLS.
-
-\- Bootstrap inference for path coefficients.
-
-\- k-fold cross-validation (PLSpredict).
+\* \[cite\_start]\*\*Modular Architecture:\*\* Clear separation between estimation, inference, and prediction. \[cite: 5, 31, 45]
 
 
 
-Note: Deterministic sign alignment is available but disabled by
+\## ⚙️ Computational Workflow
 
-default to preserve bootstrap distribution integrity.
+\[cite\_start]The engine follows a standardized PLS-SEM pipeline\[cite: 46, 56]:
 
+1\. \[cite\_start]\*\*Data Standardization:\*\* Handles centered and standardized scales. \[cite: 48, 58]
 
+2\. \[cite\_start]\*\*Iterative Mode A Estimation:\*\* Factorial and Centroid weighting schemes. \[cite: 62, 63]
 
-\--------------------------------------------------
+3\. \[cite\_start]\*\*Measurement Evaluation:\*\* Loadings, CR, AVE, and HTMT. \[cite: 6, 89]
 
-3\. WHAT'S NEW IN V1.1.0
+4\. \[cite\_start]\*\*Structural Estimation:\*\* Path coefficients via OLS on latent scores. \[cite: 6, 69]
 
-\--------------------------------------------------
+5\. \[cite\_start]\*\*Inference:\*\* Bootstrap resampling for structural significance. \[cite: 6, 70]
 
-\- Added f-squared (f2) effect size calculation.
-
-\- Implemented native plotting functions (plot\_model\_results).
-
-\- Fixed composite variance to 1 (Wold, 1982).
-
-\- Added support for multiple inner weighting schemes.
+6\. \[cite\_start]\*\*Prediction:\*\* Strict k-fold cross-validation (PLSpredict). \[cite: 6, 71, 78]
 
 
 
-\--------------------------------------------------
-
-4\. MINIMAL EXAMPLE (Copy-paste ready)
-
-\--------------------------------------------------
+> \[cite\_start]\*\*Note:\*\* Deterministic sign alignment is available but disabled by default to preserve bootstrap distribution integrity. \[cite: 65, 66]
 
 
 
-source("pls\_engine.R")
+\## 🚀 What's New in V1.1.0
+
+\* \[cite\_start]Added \*\*f-squared ($f^2$)\*\* effect size calculation. 
+
+\* \[cite\_start]Implemented native \*\*plotting functions\*\* (`plot\_model\_results`). 
+
+\* \[cite\_start]Fixed composite variance to 1 (Wold, 1982). \[cite: 63]
+
+\* \[cite\_start]Added support for multiple inner weighting schemes. \[cite: 62]
 
 
 
-\# 1. Generate data
+\## 🛠️ Minimal Example
+
+```r
+
+\# Load the engine
+
+source("R/pls\_engine.R")
+
+
+
+\# 1. Generate synthetic data
 
 set.seed(123)
 
@@ -146,43 +120,33 @@ model$tables$table4  # Structural Paths \& f2
 
 plot\_model\_results(model)
 
+```
 
 
-\--------------------------------------------------
 
-5\. CITATION
-
-\--------------------------------------------------
+\## 📖 Citation
 
 If you use this software, please cite:
 
 
 
-Soto-Perez, M. (2026). A transparent PLS-SEM engine for
+\*\*Manuscript:\*\*
 
-reflective measurement models in R. SoftwareX.
-
-(Manuscript under review).
+\*\*Soto-Perez, M. (2026).\*\* \*A transparent PLS-SEM engine for reflective measurement models in R\*. SoftwareX. (Under review) \[cite\_start]\[cite: 1].
 
 
 
-Software archive:
+\*\*Software Archive:\*\*
 
-Soto-Perez, M. (2026). plssemengine (Version 1.1.0).
-
-Zenodo. https://doi.org/10.5281/zenodo.19120651
+\*\*Soto-Perez, M. (2026).\*\* \*plssemengine (Version 1.1.0)\*. Zenodo. \[cite\_start]\[https://doi.org/10.5281/zenodo.19120651](https://doi.org/10.5281/zenodo.19120651).
 
 
 
-\--------------------------------------------------
+\## ✉️ Contact
 
-6\. CONTACT
-
-\--------------------------------------------------
-
-Dr. M. Soto-Perez
-
-Email: msoto@up.edu.mx
+\*\*Dr. \[cite\_start]M. Soto-Perez\*\* Email: \[msoto@up.edu.mx](mailto:msoto@up.edu.mx)   
 
 Universidad Panamericana, Mexico
+
+
 
