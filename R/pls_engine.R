@@ -1,5 +1,5 @@
-# Version: 1.1.0
-# Date: 2026-03-24
+# Version: 1.2.0
+# Date: 2026-04-25
 # Final symmetric release for SoftwareX submission
 
 #################################################
@@ -296,6 +296,64 @@ compute_htmt <- function(data, measurement_model, digits = 2) {
 }
 
 #################################################
+# MODEL FIT (SRMR, d_ULS, d_G)
+#################################################
+# Implements model fit metrics following Henseler et al. (2014).
+# Calculates SRMR, exact d_ULS, and exact d_G based on the 
+# saturated model-implied correlation matrix.
+compute_model_fit <- function(engine, data, measurement_model, digits = 3) {
+  
+  items <- unlist(measurement_model)
+  S <- cor(data[, items, drop = FALSE], use = "pairwise.complete.obs")
+  
+  # Build strict loading matrix (0 for cross-loadings)
+  constructs <- names(measurement_model)
+  Lambda <- matrix(0, nrow = length(items), ncol = length(constructs),
+                   dimnames = list(items, constructs))
+  
+  for (cn in constructs) {
+    inds <- measurement_model[[cn]]
+    Lambda[inds, cn] <- engine$loadings[inds, cn]
+  }
+  
+  # Construct correlation matrix (saturated inner model)
+  R <- cor(engine$scores, use = "pairwise.complete.obs")
+  
+  # Model-implied correlation matrix
+  Sigma_hat <- Lambda %*% R %*% t(Lambda)
+  diag(Sigma_hat) <- 1
+  
+  # Number of off-diagonal elements
+  p <- nrow(S)
+  lower_tri_idx <- lower.tri(S)
+  e <- S[lower_tri_idx] - Sigma_hat[lower_tri_idx]
+  
+  # 1. SRMR (Standardized Root Mean Square Residual)
+  srmr <- sqrt(mean(e^2))
+  
+  # 2. d_ULS (Squared Euclidean distance)
+  d_uls <- sum(e^2)
+  
+  # 3. d_G (Geodesic distance)
+  # Calculated as half the sum of squared logs of the eigenvalues of S * Sigma_hat^-1
+  d_g <- NA
+  tryCatch({
+    eig_vals <- eigen(S %*% solve(Sigma_hat), only.values = TRUE)$values
+    eig_vals <- Re(eig_vals)
+    eig_vals <- eig_vals[eig_vals > 0] # Keep only positive real parts
+    d_g <- 0.5 * sum((log(eig_vals))^2)
+  }, error = function(e) {
+    d_g <<- NA
+  })
+  
+  data.frame(
+    Metric = c("SRMR", "d_ULS", "d_G"),
+    Value = c(round(srmr, digits), round(d_uls, digits), round(d_g, digits)),
+    stringsAsFactors = FALSE
+  )
+}
+
+#################################################
 # PLSpredict
 #################################################
 # PLSpredict implementation following Shmueli et al. (2019).
@@ -489,6 +547,11 @@ pls_sem <- function(data,
   cmb_table <- compute_cmb_vif(engine$scores)
   
   # =====================
+  # Model Fit (SRMR, d_ULS, d_G)
+  # =====================
+  fit_table <- compute_model_fit(engine, data, measurement_model, digits)
+  
+  # =====================
   # Latent scores (table)
   # =====================
   scores_table <- as.data.frame(round(engine$scores, digits))
@@ -621,6 +684,7 @@ pls_sem <- function(data,
       table4 = table4,
       table5 = pred$table,
       cmb = cmb_table,
+      fit = fit_table,
       scores = scores_table
     ),
     warnings = list(
