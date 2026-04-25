@@ -876,6 +876,7 @@ plot_structural_model <- function(structural_model, layout = NULL,
 # Plot Structural Model with Results (Base R - Configurable & Export Ready)
 # =====================
 plot_model_results <- function(model, layout = NULL, 
+                               show_r2 = TRUE,
                                box_width = 1.1, box_height = 0.3, 
                                cex_node = 0.9, cex_beta = 0.8, cex_r2 = 0.75,
                                arr_lwd = 1.2, box_col = "white",
@@ -945,7 +946,7 @@ plot_model_results <- function(model, layout = NULL,
     r2_val <- t1$R2[t1$Construct == node_pos$name[i]][1]
     
     # Dynamic spacing based on box height to prevent overlaps regardless of resolution
-    if(!is.na(r2_val)) {
+    if(show_r2 && !is.na(r2_val)) {
       text(node_pos$x[i], node_pos$y[i] + (box_height * 0.25), labels = clean_name, cex=cex_node, font=2, col="black")
       text(node_pos$x[i], node_pos$y[i] - (box_height * 0.35), labels = paste0("(R²=", r2_val, ")"), cex=cex_r2, font=3, col="gray30")
     } else {
