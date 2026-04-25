@@ -496,9 +496,9 @@ pls_sem <- function(data,
   scores_table <- scores_table[, c("Case", setdiff(colnames(scores_table), "Case"))]
   
   # =====================
-  # Table 1 – Loadings
+  # Table 1 - Measurement Model (Loadings, CR, AVE, R2)
   # =====================
-  table1 <- data.frame(
+  t1_items <- data.frame(
     Construct = apply(engine$loadings, 1, function(x)
       colnames(engine$loadings)[which.max(abs(x))]),
     Item = rownames(engine$loadings),
@@ -509,13 +509,9 @@ pls_sem <- function(data,
     row.names = NULL
   )
   
-  # =====================
-  # Table 2 – CR, AVE and R2
-  # =====================
-  table2 <- do.call(
+  t1_constructs <- do.call(
     rbind,
     lapply(names(measurement_model), function(cn) {
-      
       items <- measurement_model[[cn]]
       lambda <- engine$loadings[items, cn]
       lambda2 <- lambda^2
@@ -525,7 +521,6 @@ pls_sem <- function(data,
       
       AVE <- mean(lambda2)
       
-      # Assign R2 only if the construct is endogenous
       r2_val <- ifelse(cn %in% names(engine$r2), engine$r2[cn], NA)
       
       data.frame(
@@ -538,6 +533,10 @@ pls_sem <- function(data,
       )
     })
   )
+  
+  table1 <- merge(t1_items, t1_constructs, by = "Construct", all.x = TRUE)
+  table1 <- table1[order(table1$Construct, table1$Item), ]
+  rownames(table1) <- NULL
   
   # =====================
   # Table 3 – HTMT
@@ -618,7 +617,6 @@ pls_sem <- function(data,
   model <- list(
     tables = list(
       table1 = table1,
-      table2 = table2,
       table3 = table3,
       table4 = table4,
       table5 = pred$table,
@@ -893,7 +891,7 @@ plot_model_results <- function(model, layout = NULL,
   }
   
   structural_model <- model$structural_model
-  t2 <- model$tables$table2; t4 <- model$tables$table4 
+  t1 <- model$tables$table1; t4 <- model$tables$table4
   
   paths <- lapply(structural_model, function(eq) {
     data.frame(from = all.vars(eq)[-1], to = all.vars(eq)[1], stringsAsFactors = FALSE)
@@ -944,7 +942,7 @@ plot_model_results <- function(model, layout = NULL,
          col=box_col, border="black", lwd=1.5)
     
     clean_name <- gsub("_", " ", node_pos$name[i])
-    r2_val <- t2$R2[t2$Construct == node_pos$name[i]]
+    r2_val <- t1$R2[t1$Construct == node_pos$name[i]][1]
     
     # Dynamic spacing based on box height to prevent overlaps regardless of resolution
     if(!is.na(r2_val)) {
