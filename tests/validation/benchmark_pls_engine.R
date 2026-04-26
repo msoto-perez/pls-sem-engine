@@ -4,8 +4,9 @@
 # Note: pls_sem() includes additional diagnostics beyond bootstrap,
 # which may increase execution time relative to plspm.
 
-source("pls_engine.R")
-library(plspm)
+# Install and load the latest version of the engine directly from the repository
+devtools::install_github("msoto-perez/pls-sem-engine", force = TRUE)
+library(plssemengine)
 
 # =========================
 # Helper: simulate data

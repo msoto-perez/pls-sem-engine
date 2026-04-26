@@ -238,26 +238,27 @@ compute_cmb_vif <- function(scores, digits = 2) {
 }
 
 #################################################
-# HTMT (Heterotrait-Monotrait Ratio)
+# HTMT & HTMT2 (Heterotrait-Monotrait Ratios)
 #################################################
-# HTMT is computed following Henseler et al. (2015).
-# It is defined as the ratio of:
-# - the mean of heterotrait-heteromethod correlations
-# - to the geometric mean of monotrait-heteromethod correlations.
-#
+# Computes HTMT (Henseler et al., 2015) and HTMT2 (Roemer et al., 2021).
+# HTMT2 uses the geometric mean, relaxing the tau-equivalence assumption, 
+# making it a consistent estimator for congeneric models.
 # No threshold-based classification is applied.
 
-compute_htmt <- function(data, measurement_model, digits = 2) {
+compute_htmt_metrics <- function(data, measurement_model, digits = 2) {
   
   X <- scale(as.matrix(data))
   constructs <- names(measurement_model)
   
-  htmt_matrix <- matrix(NA,
-                        nrow = length(constructs),
-                        ncol = length(constructs))
+  htmt_matrix <- matrix(NA, nrow = length(constructs), ncol = length(constructs), dimnames = list(constructs, constructs))
+  htmt2_matrix <- matrix(NA, nrow = length(constructs), ncol = length(constructs), dimnames = list(constructs, constructs))
   
-  rownames(htmt_matrix) <- constructs
-  colnames(htmt_matrix) <- constructs
+  # Helper for geometric mean (strictly positive values)
+  geom_mean <- function(x) {
+    x_pos <- x[x > 0 & !is.na(x)]
+    if (length(x_pos) == 0) return(NA)
+    exp(mean(log(x_pos)))
+  }
   
   for (i in seq_along(constructs)) {
     for (j in seq_along(constructs)) {
@@ -267,32 +268,40 @@ compute_htmt <- function(data, measurement_model, digits = 2) {
       items_i <- measurement_model[[constructs[i]]]
       items_j <- measurement_model[[constructs[j]]]
       
-      # Heterotrait correlations
-      cor_ij <- abs(cor(X[, items_i],
-                        X[, items_j],
-                        use = "pairwise.complete.obs"))
+      # Heterotrait correlations (absolute)
+      cor_ij <- abs(cor(X[, items_i, drop = FALSE], X[, items_j, drop = FALSE], use = "pairwise.complete.obs"))
       
-      mean_hetero <- mean(cor_ij, na.rm = TRUE)
+      # Monotrait correlations (within construct, absolute)
+      cor_ii <- abs(cor(X[, items_i, drop = FALSE], use = "pairwise.complete.obs"))
+      cor_jj <- abs(cor(X[, items_j, drop = FALSE], use = "pairwise.complete.obs"))
       
-      # Monotrait correlations (within construct)
-      cor_ii <- abs(cor(X[, items_i],
-                        use = "pairwise.complete.obs"))
-      cor_jj <- abs(cor(X[, items_j],
-                        use = "pairwise.complete.obs"))
+      cor_ii_vec <- cor_ii[lower.tri(cor_ii)]
+      cor_jj_vec <- cor_jj[lower.tri(cor_jj)]
       
-      mean_mono_i <- mean(cor_ii[lower.tri(cor_ii)], na.rm = TRUE)
-      mean_mono_j <- mean(cor_jj[lower.tri(cor_jj)], na.rm = TRUE)
+      # HTMT (Arithmetic mean)
+      mean_hetero_a <- mean(cor_ij, na.rm = TRUE)
+      mean_mono_i_a <- mean(cor_ii_vec, na.rm = TRUE)
+      mean_mono_j_a <- mean(cor_jj_vec, na.rm = TRUE)
       
-      htmt_value <- mean_hetero / sqrt(mean_mono_i * mean_mono_j)
+      htmt_val <- mean_hetero_a / sqrt(mean_mono_i_a * mean_mono_j_a)
+      htmt_matrix[i, j] <- htmt_val
+      htmt_matrix[j, i] <- htmt_val
       
-      htmt_matrix[i, j] <- htmt_value
-      htmt_matrix[j, i] <- htmt_value
+      # HTMT2 (Geometric mean)
+      mean_hetero_g <- geom_mean(as.vector(cor_ij))
+      mean_mono_i_g <- geom_mean(cor_ii_vec)
+      mean_mono_j_g <- geom_mean(cor_jj_vec)
+      
+      htmt2_val <- mean_hetero_g / sqrt(mean_mono_i_g * mean_mono_j_g)
+      htmt2_matrix[i, j] <- htmt2_val
+      htmt2_matrix[j, i] <- htmt2_val
     }
   }
   
-  diag(htmt_matrix) <- NA
-  
-  round(htmt_matrix, digits)
+  list(
+    HTMT = round(htmt_matrix, digits),
+    HTMT2 = round(htmt2_matrix, digits)
+  )
 }
 
 #################################################
@@ -602,9 +611,9 @@ pls_sem <- function(data,
   rownames(table1) <- NULL
   
   # =====================
-  # Table 3 – HTMT
+  # Table 3 – Discriminant Validity (HTMT & HTMT2)
   # =====================
-  table3 <- compute_htmt(data, measurement_model, digits)
+  htmt_results <- compute_htmt_metrics(data, measurement_model, digits)
   
   # =====================
   # Table 4 - Paths and f2 Effect Size
@@ -680,7 +689,8 @@ pls_sem <- function(data,
   model <- list(
     tables = list(
       table1 = table1,
-      table3 = table3,
+      table3_htmt = htmt_results$HTMT,
+      table3_htmt2 = htmt_results$HTMT2,
       table4 = table4,
       table5 = pred$table,
       cmb = cmb_table,
@@ -730,7 +740,7 @@ export_scores <- function(model, file = "latent_scores.csv") {
 # Any model refinement decisions must be theoretically justified.
 htmt_item_diagnostics <- function(model, threshold = 0.85, digits = 2) {
   
-  htmt <- model$tables$table3
+  htmt <- model$tables$table3_htmt
   scores <- model$tables$scores
   loadings <- model$tables$table1
   
@@ -1022,4 +1032,115 @@ plot_model_results <- function(model, layout = NULL,
     dev.off()
     message(paste("High-quality plot saved to:", file.path(getwd(), file_name)))
   }
+}
+
+# =====================
+# METHODOLOGICAL ASSESSMENT (Optional Interpretation Layer)
+# =====================
+# Provides an optional interpretive layer linking computed metrics 
+# to established methodological guidelines.
+# Addresses Reviewer concerns regarding interpretive support while 
+# maintaining the philosophy of researcher-led assessment.
+
+interpret_model <- function(model) {
+  
+  if (!inherits(model, "pls_model")) {
+    stop("Object must be of class 'pls_model'")
+  }
+  
+  cat("\n=================================================================\n")
+  cat(" OPTIONAL METHODOLOGICAL ASSESSMENT (HEURISTIC AIDS)\n")
+  cat(" Note: The following classifications are based on standard \n")
+  cat(" literature thresholds. They are provided to contextualise \n")
+  cat(" results, not to replace researcher judgment.\n")
+  cat("=================================================================\n\n")
+  
+  # 1. Measurement Model (Reliability & AVE)
+  cat("--- 1. Reflective Measurement Model (Hair et al., 2017) ---\n")
+  t1 <- model$tables$table1
+  cr_issues <- t1$Construct[!is.na(t1$`Composite Reliability (CR)`) & t1$`Composite Reliability (CR)` < 0.70]
+  ave_issues <- t1$Construct[!is.na(t1$AVE) & t1$AVE < 0.50]
+  
+  if(length(cr_issues) == 0) {
+    cat(" [*] Composite Reliability: All constructs meet the >= 0.70 guideline.\n")
+  } else {
+    cat(" [!] Composite Reliability: Constructs below 0.70 ->", paste(unique(cr_issues), collapse=", "), "\n")
+  }
+  
+  if(length(ave_issues) == 0) {
+    cat(" [*] Convergent Validity (AVE): All constructs meet the >= 0.50 guideline.\n")
+  } else {
+    cat(" [!] Convergent Validity (AVE): Constructs below 0.50 ->", paste(unique(ave_issues), collapse=", "), "\n")
+  }
+  
+  # 2. Discriminant Validity (HTMT & HTMT2)
+  cat("\n--- 2. Discriminant Validity (Henseler et al., 2015; Roemer et al., 2021) ---\n")
+  htmt <- model$tables$table3_htmt
+  htmt2 <- model$tables$table3_htmt2
+  
+  check_htmt <- function(mat, threshold = 0.85) {
+    if (is.null(mat)) return("Not calculated")
+    issues <- which(mat > threshold, arr.ind = TRUE)
+    if(nrow(issues) == 0) return("None")
+    unique_pairs <- unique(apply(issues, 1, function(x) {
+      names <- sort(c(rownames(mat)[x[1]], colnames(mat)[x[2]]))
+      paste(names[1], "-", names[2])
+    }))
+    paste(unique(unique_pairs), collapse = ", ")
+  }
+  
+  cat(" [*] HTMT pairs > 0.85 (Conservative):", check_htmt(htmt, 0.85), "\n")
+  cat(" [*] HTMT2 pairs > 0.85 (Congeneric):", check_htmt(htmt2, 0.85), "\n")
+  
+  # 3. Collinearity (Common Method Bias)
+  cat("\n--- 3. Full Collinearity VIF (Kock, 2015) ---\n")
+  cmb <- model$tables$cmb
+  cmb_issues <- cmb$Construct[!is.na(cmb$VIF) & cmb$VIF > 3.3]
+  
+  if(length(cmb_issues) == 0) {
+    cat(" [*] CMB VIF: All constructs meet the <= 3.3 guideline.\n") 
+  } else {
+    cat(" [!] CMB VIF: Constructs > 3.3 guideline ->", paste(cmb_issues, collapse=", "), "\n")
+  }
+  
+  cat("\n=================================================================\n")
+}
+
+# =====================
+# METHODOLOGICAL INTEGRATION (CB-SEM / CFA)
+# =====================
+# Bridges the workflow between variance-based PLS-SEM and 
+# covariance-based SEM (CB-SEM) or Confirmatory Factor Analysis (CFA).
+# Automatically translates the native engine specification into lavaan syntax,
+# fostering comparative methodological education and cross-validation.
+
+export_lavaan_syntax <- function(measurement_model, structural_model = NULL) {
+  
+  syntax <- c("# --- Measurement Model (CFA) ---")
+  
+  for (construct in names(measurement_model)) {
+    items <- measurement_model[[construct]]
+    syntax <- c(syntax, paste(construct, "=~", paste(items, collapse = " + ")))
+  }
+  
+  if (!is.null(structural_model) && length(structural_model) > 0) {
+    syntax <- c(syntax, "", "# --- Structural Model ---")
+    for (eq in structural_model) {
+      lhs <- as.character(eq[[2]])
+      rhs <- all.vars(eq[[3]])
+      if (length(rhs) > 0) {
+        syntax <- c(syntax, paste(lhs, "~", paste(rhs, collapse = " + ")))
+      }
+    }
+  }
+  
+  final_syntax <- paste(syntax, collapse = "\n")
+  cat("\n=================================================================\n")
+  cat(" LAVAAN SYNTAX GENERATOR (CB-SEM / CFA Integration)\n")
+  cat(" Copy and paste this syntax to run models using the 'lavaan' package.\n")
+  cat("=================================================================\n\n")
+  cat(final_syntax, "\n\n")
+  cat("=================================================================\n")
+  
+  invisible(final_syntax)
 }
