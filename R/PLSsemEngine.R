@@ -524,12 +524,12 @@ plspredict <- function(data,
   )
 }
 
-#################################################
-# WRAPPER – Tables 1 to 5
-#################################################
-# High-level wrapper function to execute the full PLS-SEM workflow.
-# It delegates estimation to the core engine and organizes the outputs
-# into structured, publication-ready tables.
+#################################################################
+# WRAPPER – High-Level Analysis Workflow (Version 1.2.0)
+#################################################################
+# Main function of the PLSsemEngine. It coordinates the estimation,
+# assessment, and predictive evaluation stages, returning results
+# in a structured, publication-ready S3 object.
 
 #' Estimate a PLS-SEM Model
 #'
@@ -543,7 +543,6 @@ plspredict <- function(data,
 #' @param digits Number of decimal places for output tables.
 #' @param sign_correction Logical; if TRUE, applies deterministic sign alignment.
 #' @param inner_scheme The weighting scheme for the inner model ("factorial" or "centroid").
-#' @param ... Additional arguments.
 #' @return A list of class 'pls_model' containing structured tables and metadata.
 #' @export
 pls_sem <- function(data,
@@ -555,9 +554,10 @@ pls_sem <- function(data,
                     sign_correction = FALSE,
                     inner_scheme = "factorial") { 
   
-  # =====================
-  # Base estimate
-  # =====================
+  # =============================================================
+  # 1. CORE ESTIMATION
+  # =============================================================
+  # Executes the iterative PLS algorithm (Mode A) to obtain latent scores
   engine <- pls_engine(
     data = data,
     measurement_model = measurement_model,
@@ -566,26 +566,10 @@ pls_sem <- function(data,
     inner_scheme = inner_scheme 
   )
   
-  # =====================
-  # CMB – Full collinearity VIF
-  # =====================
-  cmb_table <- compute_cmb_vif(engine$scores)
-  
-  # =====================
-  # Model Fit (SRMR, d_ULS, d_G)
-  # =====================
-  fit_table <- compute_model_fit(engine, data, measurement_model, digits)
-  
-  # =====================
-  # Latent scores (table)
-  # =====================
-  scores_table <- as.data.frame(round(engine$scores, digits))
-  scores_table$Case <- seq_len(nrow(scores_table))
-  scores_table <- scores_table[, c("Case", setdiff(colnames(scores_table), "Case"))]
-  
-  # =====================
-  # Table 1 - Measurement Model (Loadings, CR, AVE, R2)
-  # =====================
+  # =============================================================
+  # 2. MEASUREMENT MODEL ASSESSMENT (Manuscript Table 1)
+  # =============================================================
+  # Extract item loadings
   t1_items <- data.frame(
     Construct = apply(engine$loadings, 1, function(x)
       colnames(engine$loadings)[which.max(abs(x))]),
@@ -597,6 +581,7 @@ pls_sem <- function(data,
     row.names = NULL
   )
   
+  # Calculate Construct Reliability (CR), AVE, and R-squared
   t1_constructs <- do.call(
     rbind,
     lapply(names(measurement_model), function(cn) {
@@ -604,11 +589,14 @@ pls_sem <- function(data,
       lambda <- engine$loadings[items, cn]
       lambda2 <- lambda^2
       
+      # Composite Reliability (CR) calculation
       den <- (sum(lambda))^2 + sum(1 - lambda2)
       CR <- ifelse(den == 0, NA, (sum(lambda))^2 / den)
       
+      # Average Variance Extracted (AVE) calculation
       AVE <- mean(lambda2)
       
+      # Retrieve R2 if construct is endogenous
       r2_val <- ifelse(cn %in% names(engine$r2), engine$r2[cn], NA)
       
       data.frame(
@@ -622,18 +610,21 @@ pls_sem <- function(data,
     })
   )
   
-  table1 <- merge(t1_items, t1_constructs, by = "Construct", all.x = TRUE)
-  table1 <- table1[order(table1$Construct, table1$Item), ]
-  rownames(table1) <- NULL
+  # Merge item and construct metrics for Table 1
+  measurement_results <- merge(t1_items, t1_constructs, by = "Construct", all.x = TRUE)
+  measurement_results <- measurement_results[order(measurement_results$Construct, measurement_results$Item), ]
+  rownames(measurement_results) <- NULL
   
-  # =====================
-  # Table 3 – Discriminant Validity (HTMT & HTMT2)
-  # =====================
+  # =============================================================
+  # 3. DISCRIMINANT VALIDITY (Manuscript Table 3)
+  # =============================================================
+  # Computes HTMT and HTMT2 (congeneric models) as requested by Reviewer 4
   htmt_results <- compute_htmt_metrics(data, measurement_model, digits)
   
-  # =====================
-  # Table 4 - Paths and f2 Effect Size
-  # =====================
+  # =============================================================
+  # 4. STRUCTURAL MODEL & INFERENCE (Manuscript Table 4)
+  # =============================================================
+  # Execute bootstrap resampling
   boot <- bootstrap_paths(
     data = data,
     measurement_model = measurement_model,
@@ -643,7 +634,8 @@ pls_sem <- function(data,
     inner_scheme = inner_scheme 
   )
   
-  table4 <- do.call(
+  # Compile structural path coefficients, confidence intervals, and f2 effect sizes
+  structural_results <- do.call(
     rbind,
     lapply(structural_model, function(f) {
       
@@ -660,7 +652,7 @@ pls_sem <- function(data,
           path_name <- paste(rhs[i], "→", lhs)
           bdist <- boot$Beta[boot$Path == path_name]
           
-          # f2 Effect Size calculation
+          # f2 Effect Size calculation (R2 increase)
           rhs_excl <- setdiff(rhs, rhs[i])
           if (length(rhs_excl) == 0) {
             r2_excl <- 0
@@ -687,9 +679,10 @@ pls_sem <- function(data,
     })
   )
   
-  # =====================
-  # Table 5 – PLSpredict
-  # =====================
+  # =============================================================
+  # 5. PREDICTIVE EVALUATION (Manuscript Table 5)
+  # =============================================================
+  # Executes k-fold cross-validation (PLSpredict)
   pred <- plspredict(
     data = data,
     measurement_model = measurement_model,
@@ -699,19 +692,33 @@ pls_sem <- function(data,
     inner_scheme = inner_scheme 
   )
   
-  # =====================
-  # Final Object Assembly
-  # =====================
+  # =============================================================
+  # 6. COMPLEMENTARY DIAGNOSTICS (Reviewer-requested features)
+  # =============================================================
+  # Full Collinearity VIF for Common Method Bias
+  cmb_table <- compute_cmb_vif(engine$scores)
+  
+  # Global Model Fit indices (SRMR, d_ULS, d_G)
+  fit_table <- compute_model_fit(engine, data, measurement_model, digits)
+  
+  # =============================================================
+  # 7. FINAL OBJECT ASSEMBLY
+  # =============================================================
+  # Organized into descriptive elements to satisfy 'usability' concerns
   model <- list(
-    tables = list(
-      table1 = table1,
-      table3_htmt = htmt_results$HTMT,
-      table3_htmt2 = htmt_results$HTMT2,
-      table4 = table4,
-      table5 = pred$table,
-      cmb = cmb_table,
-      fit = fit_table,
-      scores = scores_table
+    measurement_model = measurement_results,     # Corresponds to Table 1
+    discriminant_validity = htmt_results,        # Corresponds to Table 3 (HTMT & HTMT2)
+    structural_model = structural_results,       # Corresponds to Table 4
+    predictive_relevance = pred$table,           # Corresponds to Table 5
+    diagnostics = list(
+      common_method_bias = cmb_table,            # Full Collinearity VIF
+      global_fit = fit_table                     # SRMR, d_ULS, d_G
+    ),
+    latent_scores = as.data.frame(round(engine$scores, digits)),
+    raw_engine = engine,                         # Stored for plotting/internal diagnostics
+    specification = list(
+      measurement = measurement_model, 
+      structural = structural_model
     ),
     warnings = list(
       measurement = NULL,
@@ -720,15 +727,14 @@ pls_sem <- function(data,
     ),
     meta = list(
       n_obs = nrow(data),
-      constructs = names(measurement_model)
-    ),
-    # Core components saved for plotting and diagnostic functions
-    engine = engine, 
-    structural_model = structural_model 
+      constructs = names(measurement_model),
+      inner_scheme = inner_scheme,
+      version = "1.2.0"
+    )
   )
   
   class(model) <- "pls_model"
-  model
+  return(model)
 }
 
 # =====================
