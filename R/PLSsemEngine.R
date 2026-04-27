@@ -29,7 +29,7 @@
 # or interpretative flags are implemented by design.
 
 #################################################
-# PLS-SEM ENGINE (Reflective Measurement, Mode A)
+# PLSsemEngine (Reflective Measurement, Mode A)
 #################################################
 pls_engine <- function(data,
                        measurement_model,
