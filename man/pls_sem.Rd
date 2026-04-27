@@ -31,8 +31,6 @@ pls_sem(
 \item{sign_correction}{Logical; if TRUE, applies deterministic sign alignment.}
 
 \item{inner_scheme}{The weighting scheme for the inner model ("factorial" or "centroid").}
-
-\item{...}{Additional arguments.}
 }
 \value{
 A list of class 'pls_model' containing structured tables and metadata.
