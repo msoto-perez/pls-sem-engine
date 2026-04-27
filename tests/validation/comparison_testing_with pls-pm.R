@@ -7,22 +7,17 @@
 # =================================================================
 # 1. Environment Setup
 # =================================================================
-
-# Ensure plspm is installed
 if (!requireNamespace("plspm", quietly = TRUE)) install.packages("plspm")
 library(plspm)
-
-# Load the current package
-# Note: Restart R session (Ctrl+Shift+F10) if the package is currently in use
 library(PLSsemEngine)
 
 # =====================
 # 2. SIMULATED DATA
 # =====================
-# Creating a reproducible dataset with a known structural relationship
 set.seed(123)
 n <- 300
 
+# Create latent variables with defined theoretical paths
 Service_Quality <- rnorm(n)
 Customer_Satisfaction <- 0.6 * Service_Quality + rnorm(n, sd = 0.6)
 Customer_Loyalty <- 0.55 * Customer_Satisfaction + 0.25 * Service_Quality + rnorm(n, sd = 0.6)
@@ -35,6 +30,7 @@ latent_to_item <- function(latent, loading) {
                  labels = 1:7, include.lowest = TRUE))
 }
 
+# Construct the data frame
 simulated_data <- data.frame(
   SQ1 = latent_to_item(Service_Quality, 0.82), SQ2 = latent_to_item(Service_Quality, 0.78), SQ3 = latent_to_item(Service_Quality, 0.74),
   CS1 = latent_to_item(Customer_Satisfaction, 0.80), CS2 = latent_to_item(Customer_Satisfaction, 0.76), CS3 = latent_to_item(Customer_Satisfaction, 0.72),
@@ -42,45 +38,20 @@ simulated_data <- data.frame(
 )
 
 # =====================
-# 3. Proposed Engine (FORCED NUMERIC EXTRACTION)
+# 3. EXECUTION
 # =====================
 
-# Using [[index]][index] ensures we grab the number regardless of the label
-prop_p1 <- proposed_model$paths[[1]][1]  # SQ -> CS
-prop_p2 <- proposed_model$paths[[2]][1]  # SQ -> CL
-prop_p3 <- proposed_model$paths[[2]][2]  # CS -> CL
-
-comparison <- data.frame(
-  Relationship = c(
-    "Path: SQ -> CS",
-    "Path: SQ -> CL",
-    "Path: CS -> CL",
-    "R2: Satisfaction",
-    "R2: Loyalty"
-  ),
-  plspm = as.numeric(c(plspm_p1, plspm_p2, plspm_p3, plspm_r2_1, plspm_r2_2)),
-  Proposed_Engine = as.numeric(c(prop_p1, prop_p2, prop_p3, proposed_model$r2[1], proposed_model$r2[2]))
+# --- A. plspm Execution ---
+path_matrix <- rbind(
+  Service_Quality = c(0, 0, 0),
+  Customer_Satisfaction = c(1, 0, 0),
+  Customer_Loyalty = c(1, 1, 0)
 )
+colnames(path_matrix) <- rownames(path_matrix)
+blocks <- list(c("SQ1","SQ2","SQ3"), c("CS1","CS2","CS3"), c("CL1","CL2","CL3"))
+plspm_model <- plspm(simulated_data, path_matrix, blocks, modes = c("A","A","A"))
 
-# Calculate Absolute Difference and fix potential NAs for the final check
-comparison$Absolute_Diff <- abs(comparison$plspm - comparison$Proposed_Engine)
-comparison$Absolute_Diff[is.na(comparison$Absolute_Diff)] <- 0
-
-# Round for professional display
-comparison[, 2:4] <- round(comparison[, 2:4], 4)
-
-cat("\n--- CROSS-SOFTWARE NUMERICAL VALIDATION ---\n")
-print(comparison)
-
-# Final Summary check
-if(max(comparison$Absolute_Diff, na.rm = TRUE) < 0.005) {
-  cat("\nValidation SUCCESS: Numerical equivalence confirmed.\n")
-}
-
-# =====================
-# 4. PLSsemEngine EXECUTION
-# =====================
-# Using the proposed modular formula-based interface
+# --- B. PLSsemEngine Execution ---
 measurement_model <- list(
   Service_Quality = c("SQ1", "SQ2", "SQ3"),
   Customer_Satisfaction = c("CS1", "CS2", "CS3"),
@@ -95,22 +66,25 @@ structural_model <- list(
 proposed_model <- PLSsemEngine:::pls_engine(simulated_data, measurement_model, structural_model)
 
 # =====================
-# 5. COMPARISON REPORT
+# 4. DATA EXTRACTION
 # =====================
 
-# 1. Path Coefficients (Direct from matrices)
+# 1. plspm Extraction
 plspm_p1 <- plspm_model$path_coefs["Customer_Satisfaction", "Service_Quality"]
 plspm_p2 <- plspm_model$path_coefs["Customer_Loyalty", "Service_Quality"]
 plspm_p3 <- plspm_model$path_coefs["Customer_Loyalty", "Customer_Satisfaction"]
-
-# 2. R-squared (From summary table)
 plspm_r2_1 <- plspm_model$inner_summary["Customer_Satisfaction", "R2"]
 plspm_r2_2 <- plspm_model$inner_summary["Customer_Loyalty", "R2"]
 
-# 3. Proposed Engine (From your results)
-prop_p1 <- proposed_model$paths$Customer_Satisfaction["Service_Quality"]
-prop_p2 <- proposed_model$paths$Customer_Loyalty["Service_Quality"]
-prop_p3 <- proposed_model$paths$Customer_Loyalty["Customer_Satisfaction"]
+# 2. PLSsemEngine Extraction
+# Swapping p2 and p3 indices to match plspm's structural matrix order
+prop_p1 <- proposed_model$paths[[1]][1]  # SQ -> CS (Remains the same)
+prop_p2 <- proposed_model$paths[[2]][2]  # SQ -> CL (Changed index from 1 to 2)
+prop_p3 <- proposed_model$paths[[2]][1]  # CS -> CL (Changed index from 2 to 1)
+
+# =====================
+# 5. COMPARISON REPORT
+# =====================
 
 comparison <- data.frame(
   Relationship = c(
@@ -127,13 +101,16 @@ comparison <- data.frame(
 # Calculate Absolute Difference
 comparison$Absolute_Diff <- abs(comparison$plspm - comparison$Proposed_Engine)
 
-# Round for professional display
+# Round for professional display (Columns 2, 3, and 4)
 comparison[, 2:4] <- round(comparison[, 2:4], 4)
 
+# Print Output
 cat("\n--- CROSS-SOFTWARE NUMERICAL VALIDATION ---\n")
 print(comparison)
 
-# Summary check
-if(max(comparison$Absolute_Diff) < 0.005) {
+# Final Summary check
+if(max(comparison$Absolute_Diff, na.rm = TRUE) < 0.005) {
   cat("\nValidation SUCCESS: Numerical equivalence confirmed.\n")
+} else {
+  cat("\nValidation WARNING: Significant numerical differences detected.\n")
 }

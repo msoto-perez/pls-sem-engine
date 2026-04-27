@@ -5,8 +5,8 @@
 # which may increase execution time relative to plspm.
 
 # Install and load the latest version of the engine directly from the repository
-devtools::install_github("msoto-perez/pls-sem-engine", force = TRUE)
-library(plssemengine)
+devtools::install_github("msoto-perez/PLSsemEngine", force = TRUE)
+library(PLSsemEngine)
 
 # =========================
 # Helper: simulate data
@@ -97,7 +97,7 @@ for (n in sample_sizes) {
   
   # --- pls_engine (no bootstrap)
   t_engine <- system.time({
-    pls_engine(
+    PLSsemEngine:::pls_engine(
       data_sim,
       measurement_model,
       structural_model
@@ -106,7 +106,7 @@ for (n in sample_sizes) {
   
   # --- pls_sem with bootstrap
   t_pls_sem <- system.time({
-    pls_sem(
+    PLSsemEngine:::pls_sem(
       data = data_sim,
       measurement_model = measurement_model,
       structural_model = structural_model,
@@ -117,7 +117,7 @@ for (n in sample_sizes) {
   
   # --- plspm with bootstrap
   t_plspm <- system.time({
-    plspm(
+    plspm::plspm(
       data_sim,
       path_matrix,
       blocks,
