@@ -1,41 +1,56 @@
-# PLS-SEM Engine: A Transparent Reflective Engine in Base R 📊
+# PLSsemEngine: A Transparent PLS-SEM Engine in Base R 📊
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19120651.svg)](https://doi.org/10.5281/zenodo.19120651)
 
-**Version:** 1.1.0 (2026-03-24)
+[cite_start]**Version:** 1.2.0 (2026-04-25) 
 
-**plssemengine** provides a transparent, modular, and reproducible implementation of Partial Least Squares Structural Equation Modeling (PLS-SEM), specifically designed for **reflective measurement models (Mode A)**[cite: 4, 118].
+[cite_start]**PLSsemEngine** provides a transparent, modular, and reproducible implementation of Partial Least Squares Structural Equation Modeling (PLS-SEM), specifically designed for **composite-based Mode A estimation** of reflective models[cite: 4, 5].
+
+---
 
 ## 🌟 Purpose and Philosophy
 
 The software prioritizes:
-* [cite_start]**Algorithmic Transparency:** Implementation via pure base R matrix operations[cite: 14, 35, 112].
-* [cite_start]**Explicit Analytical Control:** No hidden heuristics or automatic re-specifications[cite: 7, 34, 119].
-* [cite_start]**Modular Architecture:** Clear separation between estimation, inference, and prediction[cite: 5, 31, 45].
+
+* [cite_start]**Algorithmic Transparency:** Implementation via pure base R matrix operations to ensure long-term stability[cite: 31, 44, 46].
+* [cite_start]**Methodological Bridges:** Native integration with `lavaan` for CB-SEM/CFA cross-validation[cite: 34, 35].
+* [cite_start]**Explicit Analytical Control:** No hidden heuristics or automatic re-specifications; interpretive support is optional and researcher-led[cite: 8, 28, 133].
+* [cite_start]**Modular Architecture:** Clear separation between estimation, inference, and prediction components[cite: 6, 52, 59].
+
+---
 
 ## ⚙️ Computational Workflow
 
-[cite_start]The engine follows a standardized PLS-SEM pipeline[cite: 46, 56]:
+[cite_start]The engine follows a standardized and inspectable PLS-SEM pipeline[cite: 60]:
 
-1. [cite_start]**Data Standardization:** Handles centered and standardized scales[cite: 48, 58].
-2. [cite_start]**Iterative Mode A Estimation:** Factorial and Centroid weighting schemes[cite: 62, 63].
-3. [cite_start]**Measurement Evaluation:** Loadings, CR, AVE, and HTMT[cite: 6, 89].
-4. [cite_start]**Structural Estimation:** Path coefficients via OLS on latent scores[cite: 6, 69].
-5. [cite_start]**Inference:** Bootstrap resampling for structural significance[cite: 6, 70].
-6. [cite_start]**Prediction:** Strict k-fold cross-validation (PLSpredict)[cite: 6, 71, 78].
+1. [cite_start]**Data Standardization:** Handles mean-centered and standardized scales[cite: 55, 67].
+2. [cite_start]**Iterative Mode A Estimation:** Factorial weighting scheme by default[cite: 69, 72].
+3. [cite_start]**Measurement Evaluation:** Loadings, CR, AVE, HTMT, and **HTMT2**[cite: 7, 102, 128].
+4. [cite_start]**Structural Estimation:** Path coefficients via OLS on latent scores with $f^2$ effect sizes[cite: 60, 205].
+5. [cite_start]**Inference:** Non-parametric percentile bootstrap for structural significance[cite: 81, 82].
+6. [cite_start]**Prediction:** Strict k-fold cross-validation following the `PLSpredict` protocol[cite: 88, 89].
+7. [cite_start]**Model Fit:** Assessment via SRMR, $d_{ULS}$, and $d_G$[cite: 292].
 
-> [cite_start]**Note:** Deterministic sign alignment is available but disabled by default to preserve bootstrap distribution integrity[cite: 65, 66].
+> [cite_start]**Note:** Deterministic sign alignment is implemented to ensure stability across resamples and eliminate sign indeterminacy[cite: 78, 107].
 
-## 🚀 What's New in V1.1.0
-* Added **f-squared ($f^2$)** effect size calculation.
-* Implemented native **plotting functions** (`plot_model_results`).
-* [cite_start]Fixed composite variance to 1 (Wold, 1982)[cite: 63].
-* [cite_start]Added support for multiple inner weighting schemes[cite: 62].
+---
+
+## 🚀 What's New in V1.2.0 (Response to Reviewers)
+
+* [cite_start]**Methodological Bridge:** Added `export_lavaan_syntax()` to translate PLS specifications for `lavaan`[cite: 286, 287].
+* [cite_start]**Interpretive Layer:** Added `interpret_model()` for diagnostic guidance based on established literature without forcing mechanical decisions[cite: 288, 289].
+* [cite_start]**Advanced Metrics:** Implemented **HTMT2** for congeneric models and global fit indices (SRMR, $d_{ULS}$, $d_G$)[cite: 292].
+* [cite_start]**Professional Packaging:** The software is now a fully versioned R package installable via `devtools`[cite: 284].
+
+---
 
 ## 🛠️ Minimal Example
+
 ```r
-# Load the engine
-source("R/pls_engine.R")
+# Install and load the engine
+# devtools::install_github("msoto-perez/PLSsemEngine")
+library(PLSsemEngine)
 
 # 1. Generate data
 set.seed(123)
@@ -45,7 +60,7 @@ data <- data.frame(
   CL1=rnorm(100), CL2=rnorm(100), CL3=rnorm(100)
 )
 
-# 2. Define Models
+# 2. Define Models using Native R structures
 mm <- list(
   Quality = c("SQ1", "SQ2", "SQ3"),
   Satisfaction = c("CS1", "CS2", "CS3"),
@@ -60,37 +75,25 @@ sm <- list(
 # 3. Run Analysis
 model <- pls_sem(data=data, measurement_model=mm, structural_model=sm)
 
-# 4. Results & Plots
-model$tables$table4  # Structural Paths & f2
-plot_model_results(model)
+# 4. Methodological Bridge & Interpretation
+export_lavaan_syntax(mm, sm)
+interpret_model(model)
 
+# 5. View Results
+print(model$tables$table4)  # Structural Paths
 ```
 
-
-
-\## 📖 Citation
-
+📖 Citation
 If you use this software, please cite:
 
+Manuscript:
+Soto-Perez, M. (2026). A transparent PLSsemEngine for composite-based Mode A estimation of reflective models in R. SoftwareX. (Under review) .
 
+Software Archive:
+Soto-Perez, M. (2026). PLSsemEngine (Version 1.2.0). Zenodo. https://doi.org/10.5281/zenodo.19120651.
 
-\*\*Manuscript:\*\*
+✉️ Contact
+Dr. M. Soto-Perez Email: msoto@up.edu.mx 
 
-\*\*Soto-Perez, M. (2026).\*\* \*A transparent PLS-SEM engine for reflective measurement models in R\*. SoftwareX. (Under review) \[cite\_start]\[cite: 1].
-
-
-
-\*\*Software Archive:\*\*
-
-\*\*Soto-Perez, M. (2026).\*\* \*plssemengine (Version 1.1.0)\*. Zenodo. \[cite\_start]\[https://doi.org/10.5281/zenodo.19120651](https://doi.org/10.5281/zenodo.19120651).
-
-
-
-\## ✉️ Contact
-
-\*\*Dr. \[cite\_start]M. Soto-Perez\*\* Email: \[msoto@up.edu.mx](mailto:msoto@up.edu.mx)   
-
-Universidad Panamericana, Mexico
-
-
+Universidad Panamericana, Mexico.
 

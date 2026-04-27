@@ -1,6 +1,6 @@
-Package: plssemengine
+Package: PLSsemEngine
 Type: Package
-Title: A Transparent PLS-SEM Engine for Reflective Measurement Models
+Title: A Transparent PLSsemEngine for Composite-Based Mode A Estimation
 Version: 1.2.0
 Date: 2026-04-25
 Authors@R: 
@@ -8,13 +8,17 @@ Authors@R:
            email = "msoto@up.edu.mx", 
            role = c("aut", "cre"))
 Description: A transparent and modular implementation of Partial Least Squares 
-    Structural Equation Modeling (PLS-SEM) restricted to reflective measurement 
-    models (Mode A). The package separates estimation, bootstrap inference, 
+    Structural Equation Modeling (PLS-SEM) focused on reflective measurement 
+    models (Mode A)[cite: 4, 25]. The package separates estimation, bootstrap inference, 
     and predictive evaluation into independent components, emphasising 
-    algorithmic transparency, reproducibility, and researcher-controlled analysis.
+    algorithmic transparency, reproducibility, and researcher-controlled analysis[cite: 6, 59].
 License: MIT + file LICENSE
-URL: https://github.com/msoto-perez/pls-sem-engine
+URL: https://github.com/msoto-perez/PLSsemEngine
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 4.0.0)
+Imports:
+    stats,
+    graphics,
+    grDevices
 RoxygenNote: 7.3.3

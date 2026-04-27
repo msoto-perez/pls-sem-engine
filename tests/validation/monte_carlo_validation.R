@@ -10,7 +10,8 @@
 # =================================================================
 
 # Install and load the latest version of the engine directly from the repository
-devtools::install_github("msoto-perez/pls-sem-engine", force = TRUE)
+devtools::install_github("msoto-perez/PLSsemEngine", force = TRUE)
+library(PLSsemEngine)
 library(plssemengine)
 
 # =================================================================
