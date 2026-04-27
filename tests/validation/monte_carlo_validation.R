@@ -12,7 +12,6 @@
 # Install and load the latest version of the engine directly from the repository
 devtools::install_github("msoto-perez/PLSsemEngine", force = TRUE)
 library(PLSsemEngine)
-library(plssemengine)
 
 # =================================================================
 # 2. Data Simulation and Model Definition
@@ -59,7 +58,7 @@ run_monte_carlo_benchmark <- function(data, measurement_model, structural_model,
   set.seed(seed)
   
   # Base estimation to get "population" targets
-  base_model <- plssemengine:::pls_engine(data, measurement_model, structural_model)
+  base_model <- PLSsemEngine:::pls_engine(data, measurement_model, structural_model)
   target_paths <- unlist(base_model$paths)
   
   # Extract empirical correlation matrix to simulate multivariate normal data
@@ -84,7 +83,7 @@ run_monte_carlo_benchmark <- function(data, measurement_model, structural_model,
     
     # Estimate model on synthetic data
     sim_model <- tryCatch({
-      plssemengine:::pls_engine(sim_data, measurement_model, structural_model)
+      PLSsemEngine:::pls_engine(sim_data, measurement_model, structural_model)
     }, error = function(e) return(NULL))
     
     if (!is.null(sim_model)) {
