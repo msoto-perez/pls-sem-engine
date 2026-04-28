@@ -1,0 +1,114 @@
+---
+title: "Introduction to PLSsemEngine"
+author: "Manuel Soto Pérez"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to PLSsemEngine}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  echo = TRUE
+)
+
+```
+
+## Professional PLS-SEM Workflow with PLSsemEngine
+
+This vignette demonstrates how to estimate a reflective PLS-SEM model using **PLSsemEngine**. The package provides a transparent and modular workflow for composite-based Mode A estimation.
+
+## 1. Data Generation
+To demonstrate the workflow, we first generate a synthetic dataset (N = 300) with a typical Service Marketing structure.
+
+```{r}
+library(PLSsemEngine)
+set.seed(123)
+
+# Helper function for data simulation
+simulate_example_data <- function(n) {
+  Service_Quality <- rnorm(n)
+  Customer_Satisfaction <- 0.6 * Service_Quality + rnorm(n, sd = 0.6)
+  Customer_Loyalty <- 0.55 * Customer_Satisfaction + 0.25 * Service_Quality + rnorm(n, sd = 0.6)
+  
+  latent_to_item <- function(latent, loading) {
+    x <- loading * latent + rnorm(length(latent), sd = sqrt(1 - loading^2))
+    x <- scale(x)
+    as.numeric(cut(x, breaks = quantile(x, probs = seq(0, 1, length.out = 8)), 
+                   labels = 1:7, include.lowest = TRUE))
+  }
+  
+  data.frame(
+    SQ1 = latent_to_item(Service_Quality, 0.82), SQ2 = latent_to_item(Service_Quality, 0.78), SQ3 = latent_to_item(Service_Quality, 0.74),
+    CS1 = latent_to_item(Customer_Satisfaction, 0.80), CS2 = latent_to_item(Customer_Satisfaction, 0.76), CS3 = latent_to_item(Customer_Satisfaction, 0.72),
+    CL1 = latent_to_item(Customer_Loyalty, 0.81), CL2 = latent_to_item(Customer_Loyalty, 0.77), CL3 = latent_to_item(Customer_Loyalty, 0.73)
+  )
+}
+
+simulated_data <- simulate_example_data(300)
+```
+
+## 2. Model Specification
+The engine uses native R structures (lists and formulas) to define the model.
+
+```{r}
+# Define reflective blocks
+measurement_model <- list(
+  Service_Quality = c("SQ1", "SQ2", "SQ3"),
+  Customer_Satisfaction = c("CS1", "CS2", "CS3"),
+  Customer_Loyalty = c("CL1", "CL2", "CL3")
+)
+
+# Define structural paths using formulas
+structural_model <- list(
+  Customer_Satisfaction ~ Service_Quality,
+  Customer_Loyalty ~ Customer_Satisfaction + Service_Quality
+)
+```
+
+## 3. Execution
+The pls_sem() function executes the core algorithm, bootstrap, and predictive evaluation.
+
+```{r}
+model <- pls_sem(
+  data = simulated_data,
+  measurement_model = measurement_model,
+  structural_model = structural_model,
+  nboot = 100, # Using 100 for speed in this vignette
+  k = 5
+)
+```
+
+## 4. Results Inspection
+The results are organized into descriptive tables that match the manuscript's structure.
+
+```{r}
+# Measurement Model
+model$measurement_model
+
+# Discriminant Validity
+model$discriminant_validity
+
+# Structural Model
+model$structural_model
+```
+
+## 5. Interpretation
+
+Factor loadings above 0.70 indicate acceptable indicator reliability. 
+Structural path coefficients can be interpreted as standardized effects between constructs.
+
+
+## 6. Advanced Features
+To address reviewer feedback, we include global fit indices and a bridge to CB-SEM.
+
+```{r}
+# Global Model Fit (SRMR, d_ULS, d_G)
+model$diagnostics$global_fit
+
+# Export to lavaan syntax
+export_lavaan_syntax(measurement_model, structural_model)
+```
