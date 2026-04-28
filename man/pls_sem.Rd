@@ -2,7 +2,7 @@
 % Please edit documentation in R/PLSsemEngine.R
 \name{pls_sem}
 \alias{pls_sem}
-\title{Estimate a PLS-SEM Model}
+\title{Estimate a PLS-SEM Model (Mode A)}
 \usage{
 pls_sem(
   data,
@@ -16,26 +16,28 @@ pls_sem(
 )
 }
 \arguments{
-\item{data}{A data frame containing the indicators.}
+\item{data}{A data frame containing the observed indicators.}
 
-\item{measurement_model}{A named list defining the reflective blocks.}
+\item{measurement_model}{A named list defining the reflective constructs and their items.}
 
-\item{structural_model}{A list of formulas defining the paths.}
+\item{structural_model}{A list of formulas defining the inner paths.}
 
-\item{k}{Number of folds for cross-validation (default is 5).}
+\item{k}{Integer. Number of folds for PLSpredict cross-validation. Default is 5.}
 
-\item{nboot}{Number of bootstrap resamples (default is 500).}
+\item{nboot}{Integer. Number of bootstrap resamples for inference. Default is 500.}
 
-\item{digits}{Number of decimal places for output tables.}
+\item{digits}{Integer. Number of decimal places for output tables. Default is 2.}
 
-\item{sign_correction}{Logical; if TRUE, applies deterministic sign alignment.}
+\item{sign_correction}{Logical. If TRUE, applies deterministic sign alignment.}
 
-\item{inner_scheme}{The weighting scheme for the inner model ("factorial" or "centroid").}
+\item{inner_scheme}{Character. Weighting scheme for the inner model ("factorial" or "centroid"). Default is "factorial".}
 }
 \value{
-A list of class 'pls_model' containing structured tables and metadata.
+A list of class 'pls_model' containing structured tables for measurement, structural, and predictive assessments.
 }
 \description{
-This is the main function of the PLSsemEngine. It estimates 
-latent variable scores, measurement models, and structural paths.
+This is the main high-level wrapper of the PLSsemEngine. It coordinates 
+the estimation, assessment, and predictive evaluation stages, returning all results 
+in a structured, publication-ready S3 object. It deliberately restricts estimation 
+to reflective blocks (Mode A) and avoids hidden model modifications.
 }

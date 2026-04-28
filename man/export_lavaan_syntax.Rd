@@ -2,16 +2,21 @@
 % Please edit documentation in R/PLSsemEngine.R
 \name{export_lavaan_syntax}
 \alias{export_lavaan_syntax}
-\title{Export to Lavaan Syntax}
+\title{Export to Lavaan Syntax (CB-SEM / CFA Integration)}
 \usage{
 export_lavaan_syntax(measurement_model, structural_model = NULL)
 }
 \arguments{
-\item{measurement_model}{The measurement model list.}
+\item{measurement_model}{A named list defining the reflective blocks.}
 
-\item{structural_model}{The structural model list.}
+\item{structural_model}{An optional list of formulas defining the paths.}
+}
+\value{
+Invisibly returns the generated lavaan syntax string while printing it to the console.
 }
 \description{
-Translates the PLSsemEngine model into lavaan-compatible syntax
-for CFA or CB-SEM validation.
+Actively encourages cross-methodological validation by natively 
+translating the PLSsemEngine model specification into lavaan-compatible syntax. 
+This allows researchers to seamlessly evaluate their composite models against 
+common factor models (CFA).
 }
