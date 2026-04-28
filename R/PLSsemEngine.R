@@ -736,35 +736,36 @@ pls_sem <- function(data,
   class(model) <- "pls_model"
   return(model)
 }
-
 # =====================
 # Export Scores (helper)
 # =====================
-
+#' @export
 export_scores <- function(model, file = "latent_scores.csv") {
   
-  scores <- as.data.frame(model$tables$scores)
+  # CAMBIO: Ahora accede directamente a model$latent_scores
+  scores <- as.data.frame(model$latent_scores)
+  
+  # Se añade la columna de casos para mejorar la trazabilidad
   scores$Case <- seq_len(nrow(scores))
-  scores <- scores[, c("Case", colnames(scores)[colnames(scores) != "Case"])]
+  scores <- scores[, c("Case", setdiff(colnames(scores), "Case"))]
   
   write.csv(scores, file, row.names = FALSE)
   invisible(scores)
 }
-
 # =====================
 # htmt_item_diagnostics
 # =====================
 # HTMT-guided item diagnostics.
-#
-# This function is only intended for exploratory diagnostics
-# when HTMT thresholds are exceeded.
-# It does not suggest item removal or model modification.
-# Any model refinement decisions must be theoretically justified.
+# Updated for v1.2.0 compatibility.
+#' @export
 htmt_item_diagnostics <- function(model, threshold = 0.85, digits = 2) {
   
-  htmt <- model$tables$table3_htmt
-  scores <- model$tables$scores
-  loadings <- model$tables$table1
+  # CAMBIOS: Actualización de rutas para coincidir con el nuevo Wrapper
+  # Acceso a HTMT dentro de discriminant_validity
+  htmt <- model$discriminant_validity$HTMT 
+  # Acceso directo a latent_scores y measurement_model
+  scores <- model$latent_scores
+  loadings <- model$measurement_model
   
   constructs <- colnames(htmt)
   problems <- which(htmt > threshold, arr.ind = TRUE)
@@ -781,9 +782,10 @@ htmt_item_diagnostics <- function(model, threshold = 0.85, digits = 2) {
     items_c1 <- loadings$Item[loadings$Construct == c1]
     items_c2 <- loadings$Item[loadings$Construct == c2]
     
-    # cross-item–construct correlation (diagnostic)
+    # Diagnóstico de correlación cruzada ítem-constructo
     for (it in items_c1) {
-      r <- cor(scores[, c2], scores[, c1])
+      # Usamos pairwise.complete.obs por seguridad estadística
+      r <- cor(scores[, c2], scores[, c1], use = "pairwise.complete.obs")
       out[[length(out) + 1]] <- data.frame(
         Construct_A = c1,
         Construct_B = c2,
@@ -793,7 +795,7 @@ htmt_item_diagnostics <- function(model, threshold = 0.85, digits = 2) {
     }
     
     for (it in items_c2) {
-      r <- cor(scores[, c1], scores[, c2])
+      r <- cor(scores[, c1], scores[, c2], use = "pairwise.complete.obs")
       out[[length(out) + 1]] <- data.frame(
         Construct_A = c2,
         Construct_B = c1,
@@ -805,24 +807,26 @@ htmt_item_diagnostics <- function(model, threshold = 0.85, digits = 2) {
   
   do.call(rbind, out)
 }
-
 # =====================
 # Indirect effects
 # =====================
-# Indirect effects computed as the product of path coefficients.
-#
-# No bootstrap inference or mediation classification
-# is performed by design.
+# Indirect effects computed as the product of path coefficients[cite: 85, 228].
+# Consistent with the engine's philosophy, no automated mediation labels 
+# are provided, leaving interpretation to the researcher[cite: 86, 87, 230].
+#' @export
 get_indirect_effects <- function(model, digits = 3) {
   
-  t4 <- model$tables$table4
+  # CAMBIO: Ahora accede directamente a model$structural_model (antes table4)
+  t4 <- model$structural_model
   
-  # identify beta column robustly
+  if (is.null(t4)) return(NULL)
+  
+  # Identificación robusta de la columna de coeficientes beta
   beta_col <- grep("Path", colnames(t4), value = TRUE)[1]
   
   out <- list()
   
-  # real mediators
+  # Identificación de mediadores reales (constructos que son tanto origen como destino)
   mediators <- intersect(unique(t4$To), unique(t4$From))
   
   for (m in mediators) {
@@ -852,11 +856,10 @@ get_indirect_effects <- function(model, digits = 3) {
   if (length(out) == 0) return(NULL)
   do.call(rbind, out)
 }
-
 # =====================
 # References table
 # =====================
-
+#' @export
 get_references <- function() {
   
   data.frame(
@@ -894,9 +897,12 @@ get_references <- function() {
   )
 }
 
-# =====================
+# =============================================================
 # Helper: Exact Boundary Intersection for Rectangles
-# =====================
+# =================--------------------------------------------
+# Calculates the offset for arrow positioning to ensure they 
+# touch the rectangle boundaries precisely.
+#' @export
 get_boundary_offset <- function(angle, bw, bh) {
   if (abs(tan(angle)) < bh/bw) {
     return(bw / abs(cos(angle)))
@@ -904,10 +910,10 @@ get_boundary_offset <- function(angle, bw, bh) {
     return(bh / abs(sin(angle)))
   }
 }
-
-# =====================
+# =============================================================
 # Plot Structural Model (Base R - Pure Rectangles & Export Ready)
-# =====================
+# =============================================================
+#' @export
 plot_structural_model <- function(structural_model, layout = NULL, 
                                   box_width = 1.1, box_height = 0.3, 
                                   cex_node = 0.9, arr_lwd = 1.2, 
@@ -915,6 +921,7 @@ plot_structural_model <- function(structural_model, layout = NULL,
                                   save_plot = FALSE, file_name = "structural_model.png",
                                   width = 2500, height = 1500, res = 300) {
   
+  # [El resto del código se mantiene idéntico]
   if (save_plot) {
     if (capabilities("cairo")) {
       png(filename = file_name, width = width, height = height, res = res, type = "cairo")
@@ -968,9 +975,11 @@ plot_structural_model <- function(structural_model, layout = NULL,
   }
 }
 
-# =====================
-# Plot Structural Model with Results (Base R - Configurable & Export Ready)
-# =====================
+# =============================================================
+# Plot Structural Model with Results (Base R - Configurable)
+# =============================================================
+# Updated for v1.2.0: Aligned with new modular output structure.
+#' @export
 plot_model_results <- function(model, layout = NULL, 
                                show_r2 = TRUE,
                                box_width = 1.1, box_height = 0.3, 
@@ -987,8 +996,10 @@ plot_model_results <- function(model, layout = NULL,
     }
   }
   
-  structural_model <- model$structural_model
-  t1 <- model$tables$table1; t4 <- model$tables$table4
+  # CAMBIOS: Actualización de rutas internas
+  structural_model <- model$specification$structural
+  t1 <- model$measurement_model # Anteriormente table1
+  t4 <- model$structural_model  # Anteriormente table4
   
   paths <- lapply(structural_model, function(eq) {
     data.frame(from = all.vars(eq)[-1], to = all.vars(eq)[1], stringsAsFactors = FALSE)
@@ -1008,6 +1019,7 @@ plot_model_results <- function(model, layout = NULL,
        ylim = c(min(node_pos$y) - box_height*1.5, max(node_pos$y) + box_height*1.5), 
        axes = FALSE, xlab = "", ylab = "", main = "")
   
+  # Dibujo de flechas y Coeficientes Beta
   for(i in 1:nrow(edges)) {
     pos_from <- node_pos[node_pos$name == edges$from[i], ]
     pos_to <- node_pos[node_pos$name == edges$to[i], ]
@@ -1022,29 +1034,32 @@ plot_model_results <- function(model, layout = NULL,
     
     arrows(x0 = x0_arr, y0 = y0_arr, x1 = x1_arr, y1 = y1_arr, length = 0.12, lwd = arr_lwd, col = "gray40")
     
-    beta_val <- t4$`Path Coefficient (β)`[t4$From == edges$from[i] & t4$To == edges$to[i]]
-    mid_x <- (x0_arr + x1_arr)/2; mid_y <- (y0_arr + y1_arr)/2
-    lbl <- paste0("β=", beta_val)
+    # CAMBIO: Identificación robusta de la columna de coeficientes
+    beta_col <- grep("Path", colnames(t4), value = TRUE)[1]
+    beta_val <- t4[[beta_col]][t4$From == edges$from[i] & t4$To == edges$to[i]]
     
-    # Text Masking - Expanded significantly to completely cut the arrow line
+    mid_x <- (x0_arr + x1_arr)/2; mid_y <- (y0_arr + y1_arr)/2
+    lbl <- paste0("beta=", beta_val)
+    
     w <- strwidth(lbl, cex=cex_beta) * 0.75 
     h <- strheight(lbl, cex=cex_beta) * 0.9  
     rect(mid_x - w, mid_y - h, mid_x + w, mid_y + h, col="white", border=NA)
     text(mid_x, mid_y, labels = lbl, cex = cex_beta, font = 3, col = "black")
   }
   
+  # Dibujo de Rectángulos y R2
   for(i in 1:nrow(node_pos)) {
     rect(node_pos$x[i]-box_width, node_pos$y[i]-box_height, 
          node_pos$x[i]+box_width, node_pos$y[i]+box_height, 
          col=box_col, border="black", lwd=1.5)
     
     clean_name <- gsub("_", " ", node_pos$name[i])
+    # CAMBIO: Búsqueda del R2 en el nuevo objeto t1
     r2_val <- t1$R2[t1$Construct == node_pos$name[i]][1]
     
-    # Dynamic spacing based on box height to prevent overlaps regardless of resolution
     if(show_r2 && !is.na(r2_val)) {
       text(node_pos$x[i], node_pos$y[i] + (box_height * 0.25), labels = clean_name, cex=cex_node, font=2, col="black")
-      text(node_pos$x[i], node_pos$y[i] - (box_height * 0.35), labels = paste0("(R²=", r2_val, ")"), cex=cex_r2, font=3, col="gray30")
+      text(node_pos$x[i], node_pos$y[i] - (box_height * 0.35), labels = paste0("(R2=", r2_val, ")"), cex=cex_r2, font=3, col="gray30")
     } else {
       text(node_pos$x[i], node_pos$y[i], labels = clean_name, cex=cex_node, font=2, col="black")
     }
@@ -1055,20 +1070,12 @@ plot_model_results <- function(model, layout = NULL,
     message(paste("High-quality plot saved to:", file.path(getwd(), file_name)))
   }
 }
-
-# =====================
+# =============================================================
 # METHODOLOGICAL ASSESSMENT (Optional Interpretation Layer)
-# =====================
-# Provides an optional interpretive layer linking computed metrics 
-# to established methodological guidelines.
-# Addresses Reviewer concerns regarding interpretive support while 
-# maintaining the philosophy of researcher-led assessment.
-
-#' Interpret PLS-SEM Results
-#'
-#' @description Provides a narrative diagnostic layer based on established 
-#' literature (Hair et al., Henseler et al.) without automated decision-making.
-#' @param model A fitted PLSsemEngine object.
+# =============================================================
+# Provides a narrative diagnostic layer based on established 
+# literature (Hair et al., Henseler et al.) without automated decision-making.
+# Updated for v1.2.0 to match the descriptive output structure.
 #' @export
 interpret_model <- function(model) {
   
@@ -1085,7 +1092,10 @@ interpret_model <- function(model) {
   
   # 1. Measurement Model (Reliability & AVE)
   cat("--- 1. Reflective Measurement Model (Hair et al., 2017) ---\n")
-  t1 <- model$tables$table1
+  
+  # CAMBIO: Ahora accede directamente a model$measurement_model
+  t1 <- model$measurement_model 
+  
   cr_issues <- t1$Construct[!is.na(t1$`Composite Reliability (CR)`) & t1$`Composite Reliability (CR)` < 0.70]
   ave_issues <- t1$Construct[!is.na(t1$AVE) & t1$AVE < 0.50]
   
@@ -1103,10 +1113,12 @@ interpret_model <- function(model) {
   
   # 2. Discriminant Validity (HTMT & HTMT2)
   cat("\n--- 2. Discriminant Validity (Henseler et al., 2015; Roemer et al., 2021) ---\n")
-  htmt <- model$tables$table3_htmt
-  htmt2 <- model$tables$table3_htmt2
   
-  check_htmt <- function(mat, threshold = 0.85) {
+  # CAMBIO: Acceso a la lista discriminant_validity
+  htmt <- model$discriminant_validity$HTMT
+  htmt2 <- model$discriminant_validity$HTMT2
+  
+  check_htmt_vals <- function(mat, threshold = 0.85) {
     if (is.null(mat)) return("Not calculated")
     issues <- which(mat > threshold, arr.ind = TRUE)
     if(nrow(issues) == 0) return("None")
@@ -1117,12 +1129,15 @@ interpret_model <- function(model) {
     paste(unique(unique_pairs), collapse = ", ")
   }
   
-  cat(" [*] HTMT pairs > 0.85 (Conservative):", check_htmt(htmt, 0.85), "\n")
-  cat(" [*] HTMT2 pairs > 0.85 (Congeneric):", check_htmt(htmt2, 0.85), "\n")
+  cat(" [*] HTMT pairs > 0.85 (Conservative):", check_htmt_vals(htmt, 0.85), "\n")
+  cat(" [*] HTMT2 pairs > 0.85 (Congeneric):", check_htmt_vals(htmt2, 0.85), "\n")
   
   # 3. Collinearity (Common Method Bias)
   cat("\n--- 3. Full Collinearity VIF (Kock, 2015) ---\n")
-  cmb <- model$tables$cmb
+  
+  # CAMBIO: Acceso a diagnostics$common_method_bias
+  cmb <- model$diagnostics$common_method_bias
+  
   cmb_issues <- cmb$Construct[!is.na(cmb$VIF) & cmb$VIF > 3.3]
   
   if(length(cmb_issues) == 0) {
