@@ -118,4 +118,5 @@ plot_structural_model(structural_model)
 plot_model_results(model, show_r2 = TRUE)
 
 # 6.3 Export results for external reporting
-export_scores(model, "latent_scores_v120.csv") [cite: 100, 107]
+export_scores(model, "latent_scores.csv")
+

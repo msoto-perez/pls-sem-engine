@@ -742,10 +742,10 @@ pls_sem <- function(data,
 #' @export
 export_scores <- function(model, file = "latent_scores.csv") {
   
-  # CAMBIO: Ahora accede directamente a model$latent_scores
+  # Access model$latent_scores directly
   scores <- as.data.frame(model$latent_scores)
   
-  # Se añade la columna de casos para mejorar la trazabilidad
+  # A “Cases” column has been added to improve traceability
   scores$Case <- seq_len(nrow(scores))
   scores <- scores[, c("Case", setdiff(colnames(scores), "Case"))]
   
@@ -760,10 +760,8 @@ export_scores <- function(model, file = "latent_scores.csv") {
 #' @export
 htmt_item_diagnostics <- function(model, threshold = 0.85, digits = 2) {
   
-  # CAMBIOS: Actualización de rutas para coincidir con el nuevo Wrapper
-  # Acceso a HTMT dentro de discriminant_validity
   htmt <- model$discriminant_validity$HTMT 
-  # Acceso directo a latent_scores y measurement_model
+
   scores <- model$latent_scores
   loadings <- model$measurement_model
   
@@ -782,9 +780,9 @@ htmt_item_diagnostics <- function(model, threshold = 0.85, digits = 2) {
     items_c1 <- loadings$Item[loadings$Construct == c1]
     items_c2 <- loadings$Item[loadings$Construct == c2]
     
-    # Diagnóstico de correlación cruzada ítem-constructo
+    # Item-construct cross-correlation analysis
     for (it in items_c1) {
-      # Usamos pairwise.complete.obs por seguridad estadística
+      # We use pairwise.complete.obs for statistical robustness
       r <- cor(scores[, c2], scores[, c1], use = "pairwise.complete.obs")
       out[[length(out) + 1]] <- data.frame(
         Construct_A = c1,
@@ -816,17 +814,16 @@ htmt_item_diagnostics <- function(model, threshold = 0.85, digits = 2) {
 #' @export
 get_indirect_effects <- function(model, digits = 3) {
   
-  # CAMBIO: Ahora accede directamente a model$structural_model (antes table4)
   t4 <- model$structural_model
   
   if (is.null(t4)) return(NULL)
   
-  # Identificación robusta de la columna de coeficientes beta
+  # Robust identification of the beta coefficient column
   beta_col <- grep("Path", colnames(t4), value = TRUE)[1]
   
   out <- list()
   
-  # Identificación de mediadores reales (constructos que son tanto origen como destino)
+  # Identification of real mediators (constructs that are both source and destination)
   mediators <- intersect(unique(t4$To), unique(t4$From))
   
   for (m in mediators) {
@@ -921,7 +918,6 @@ plot_structural_model <- function(structural_model, layout = NULL,
                                   save_plot = FALSE, file_name = "structural_model.png",
                                   width = 2500, height = 1500, res = 300) {
   
-  # [El resto del código se mantiene idéntico]
   if (save_plot) {
     if (capabilities("cairo")) {
       png(filename = file_name, width = width, height = height, res = res, type = "cairo")
@@ -996,7 +992,6 @@ plot_model_results <- function(model, layout = NULL,
     }
   }
   
-  # CAMBIOS: Actualización de rutas internas
   structural_model <- model$specification$structural
   t1 <- model$measurement_model # Anteriormente table1
   t4 <- model$structural_model  # Anteriormente table4
@@ -1019,7 +1014,7 @@ plot_model_results <- function(model, layout = NULL,
        ylim = c(min(node_pos$y) - box_height*1.5, max(node_pos$y) + box_height*1.5), 
        axes = FALSE, xlab = "", ylab = "", main = "")
   
-  # Dibujo de flechas y Coeficientes Beta
+  # Drawing Arrows and Beta Coefficients
   for(i in 1:nrow(edges)) {
     pos_from <- node_pos[node_pos$name == edges$from[i], ]
     pos_to <- node_pos[node_pos$name == edges$to[i], ]
@@ -1034,7 +1029,7 @@ plot_model_results <- function(model, layout = NULL,
     
     arrows(x0 = x0_arr, y0 = y0_arr, x1 = x1_arr, y1 = y1_arr, length = 0.12, lwd = arr_lwd, col = "gray40")
     
-    # CAMBIO: Identificación robusta de la columna de coeficientes
+    # Robust identification of the coefficient column
     beta_col <- grep("Path", colnames(t4), value = TRUE)[1]
     beta_val <- t4[[beta_col]][t4$From == edges$from[i] & t4$To == edges$to[i]]
     
@@ -1047,14 +1042,14 @@ plot_model_results <- function(model, layout = NULL,
     text(mid_x, mid_y, labels = lbl, cex = cex_beta, font = 3, col = "black")
   }
   
-  # Dibujo de Rectángulos y R2
+  # Drawing Rectangles and R2
   for(i in 1:nrow(node_pos)) {
     rect(node_pos$x[i]-box_width, node_pos$y[i]-box_height, 
          node_pos$x[i]+box_width, node_pos$y[i]+box_height, 
          col=box_col, border="black", lwd=1.5)
     
     clean_name <- gsub("_", " ", node_pos$name[i])
-    # CAMBIO: Búsqueda del R2 en el nuevo objeto t1
+
     r2_val <- t1$R2[t1$Construct == node_pos$name[i]][1]
     
     if(show_r2 && !is.na(r2_val)) {
@@ -1093,7 +1088,6 @@ interpret_model <- function(model) {
   # 1. Measurement Model (Reliability & AVE)
   cat("--- 1. Reflective Measurement Model (Hair et al., 2017) ---\n")
   
-  # CAMBIO: Ahora accede directamente a model$measurement_model
   t1 <- model$measurement_model 
   
   cr_issues <- t1$Construct[!is.na(t1$`Composite Reliability (CR)`) & t1$`Composite Reliability (CR)` < 0.70]
@@ -1114,7 +1108,6 @@ interpret_model <- function(model) {
   # 2. Discriminant Validity (HTMT & HTMT2)
   cat("\n--- 2. Discriminant Validity (Henseler et al., 2015; Roemer et al., 2021) ---\n")
   
-  # CAMBIO: Acceso a la lista discriminant_validity
   htmt <- model$discriminant_validity$HTMT
   htmt2 <- model$discriminant_validity$HTMT2
   
@@ -1135,7 +1128,6 @@ interpret_model <- function(model) {
   # 3. Collinearity (Common Method Bias)
   cat("\n--- 3. Full Collinearity VIF (Kock, 2015) ---\n")
   
-  # CAMBIO: Acceso a diagnostics$common_method_bias
   cmb <- model$diagnostics$common_method_bias
   
   cmb_issues <- cmb$Construct[!is.na(cmb$VIF) & cmb$VIF > 3.3]
