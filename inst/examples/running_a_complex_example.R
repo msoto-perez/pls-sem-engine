@@ -1,10 +1,13 @@
-# ==============================================================================
+################################################################################
 # Complex Example: Extended Technology Acceptance Model (TAM)
-# Demonstrates the scalability of the plssemengine with a 5-construct model
-# and dynamic plotting capabilities.
-# ==============================================================================
+# Version: 1.2.0
+# Description: Demonstrates scalability with a 5-construct model, 
+#              automated circular plotting, and mediation analysis.
+################################################################################
 
-source("pls_engine.R")
+# Load the package
+devtools::install_github("msoto-perez/PLSsemEngine", force = TRUE)
+library(PLSsemEngine)
 
 # =====================
 # 1. SIMULATED DATA (N = 400)
@@ -12,7 +15,7 @@ source("pls_engine.R")
 set.seed(456)
 n <- 400
 
-# Core structural relationships
+# Core structural relationships (Latent Variables)
 System_Quality <- rnorm(n)
 Info_Quality   <- rnorm(n)
 
@@ -20,7 +23,7 @@ Perceived_Ease_of_Use <- 0.45 * System_Quality + 0.35 * Info_Quality + rnorm(n, 
 Perceived_Usefulness  <- 0.50 * Perceived_Ease_of_Use + 0.40 * Info_Quality + rnorm(n, sd = 0.5)
 Intention_to_Use      <- 0.55 * Perceived_Usefulness + 0.30 * Perceived_Ease_of_Use + rnorm(n, sd = 0.4)
 
-# Helper function to generate Likert-scale items
+# Helper function to generate Likert-scale items (1-7)
 latent_to_item <- function(latent, loading) {
   x <- loading * latent + rnorm(length(latent), sd = sqrt(1 - loading^2))
   x <- scale(x)
@@ -32,7 +35,7 @@ latent_to_item <- function(latent, loading) {
   ))
 }
 
-# Generate dataset
+# Generate dataset with item names corresponding to abbreviations
 data_tam <- data.frame(
   SQ1 = latent_to_item(System_Quality, 0.85),
   SQ2 = latent_to_item(System_Quality, 0.80),
@@ -56,59 +59,68 @@ data_tam <- data.frame(
 )
 
 # =====================
-# 2. MODEL SPECIFICATION
+# 2. MODEL SPECIFICATION (Using Abbreviations)
 # =====================
+# Abbreviations (SYST, INFO, PEOU, PU, ITU) ensure clean circular plots
 measurement_model_tam <- list(
-  System_Quality        = c("SQ1", "SQ2", "SQ3"),
-  Info_Quality          = c("IQ1", "IQ2", "IQ3"),
-  Perceived_Ease_of_Use = c("PEOU1", "PEOU2", "PEOU3"),
-  Perceived_Usefulness  = c("PU1", "PU2", "PU3"),
-  Intention_to_Use      = c("ITU1", "ITU2", "ITU3")
+  SYST = c("SQ1", "SQ2", "SQ3"),
+  INFO = c("IQ1", "IQ2", "IQ3"),
+  PEOU = c("PEOU1", "PEOU2", "PEOU3"),
+  PU   = c("PU1", "PU2", "PU3"),
+  ITU  = c("ITU1", "ITU2", "ITU3")
 )
 
-# Complex structural paths (multiple mediations)
+# Define structural paths using the new abbreviations
 structural_model_tam <- list(
-  Perceived_Ease_of_Use ~ System_Quality + Info_Quality,
-  Perceived_Usefulness  ~ Perceived_Ease_of_Use + Info_Quality,
-  Intention_to_Use      ~ Perceived_Usefulness + Perceived_Ease_of_Use
+  PEOU ~ SYST + INFO,
+  PU   ~ PEOU + INFO,
+  ITU  ~ PU + PEOU
 )
 
 # =====================
-# 3. FINAL EXECUTION 
+# 3. MODEL EXECUTION
 # =====================
-cat("Running complex PLS-SEM model...\n")
+cat("Executing PLS-SEM for Complex TAM Model...\n")
 model_tam <- pls_sem(
   data = data_tam,
   measurement_model = measurement_model_tam,
   structural_model = structural_model_tam,
   k = 5,
-  nboot = 200 # Set to 200 for faster example execution, use 500-1000 for papers
+  nboot = 200 # Faster for examples; use 500+ for final research
 )
 
 # =====================
-# 4. RESULTS & PLOTS
+# 4. COMPREHENSIVE RESULTS
 # =====================
-model_tam$tables$table1
-model_tam$tables$table2
-model_tam$tables$table3
-model_tam$tables$table4
-model_tam$tables$table5
-model_tam$tables$cmb 
+# Display main results with descriptive names (v1.2.0 standard)
+print(model_tam$measurement_model)      # Loadings, Reliability, and R2
+print(model_tam$discriminant_validity)  # HTMT and HTMT2 matrices
+print(model_tam$structural_model)       # Path Coefficients and f2
+print(model_tam$predictive_relevance)   # PLSpredict (RMSE, Q2_predict)
 
-# Further diagnostics
+# Multicollinearity & Global Fit
+print(model_tam$diagnostics$common_method_bias)
+print(model_tam$diagnostics$global_fit)
+
+# Indirect Effects (Mediation analysis)
 get_indirect_effects(model_tam)
-get_references()
 
-# Test the dynamic plotting with 5 constructs
-plot_structural_model(structural_model_tam)
-plot_structural_model(structural_model_tam, save_plot = TRUE, file_name = "conceptual model.png")
+# Narrative Interpretation Layer
+interpret_model(model_tam)
 
-plot_model_results(model_tam)
+# =====================
+# 5. VISUALIZATION (Automated Circular Layout)
+# =====================
+# Using abbreviations allows for standard box sizes without overlapping
 plot_model_results(model_tam, 
-                   box_height = 0.5,
-                   box_width = 1.3,  
-                   cex_node = 0.85,
-                   cex_r2 = 0.50,
-                   cex_beta = 0.80, 
-                   save_plot = TRUE, 
-                   file_name = "model_with_results.png")
+                   show_r2 = FALSE,  
+                   box_width = 1.1, 
+                   box_height = 0.3)
+
+# Save high-resolution circular plot for external reporting
+plot_model_results(model_tam, 
+                   layout     = NULL, 
+                   save_plot  = TRUE, 
+                   file_name  = "TAM_Circular_Results.png")
+
+cat("\nAnalysis complete. Results and plots are ready.\n")
