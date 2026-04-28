@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Manuel Soto Pérez" />
+
+
+<title>Introduction to PLSsemEngine</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Introduction to PLSsemEngine</h1>
+<h4 class="author">Manuel Soto Pérez</h4>
+
+
+
+<div id="professional-pls-sem-workflow-with-plssemengine" class="section level2">
+<h2>Professional PLS-SEM Workflow with PLSsemEngine</h2>
+<p>This vignette demonstrates how to estimate a reflective PLS-SEM model
+using <strong>PLSsemEngine</strong>. The package provides a transparent
+and modular workflow for composite-based Mode A estimation.</p>
+</div>
+<div id="data-generation" class="section level2">
+<h2>1. Data Generation</h2>
+<p>To demonstrate the workflow, we first generate a synthetic dataset (N
+= 300) with a typical Service Marketing structure.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(PLSsemEngine)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># Helper function for data simulation</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>simulate_example_data <span class="ot">&lt;-</span> <span class="cf">function</span>(n) {</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  Service_Quality <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  Customer_Satisfaction <span class="ot">&lt;-</span> <span class="fl">0.6</span> <span class="sc">*</span> Service_Quality <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.6</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>  Customer_Loyalty <span class="ot">&lt;-</span> <span class="fl">0.55</span> <span class="sc">*</span> Customer_Satisfaction <span class="sc">+</span> <span class="fl">0.25</span> <span class="sc">*</span> Service_Quality <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.6</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  </span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>  latent_to_item <span class="ot">&lt;-</span> <span class="cf">function</span>(latent, loading) {</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>    x <span class="ot">&lt;-</span> loading <span class="sc">*</span> latent <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">length</span>(latent), <span class="at">sd =</span> <span class="fu">sqrt</span>(<span class="dv">1</span> <span class="sc">-</span> loading<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>    x <span class="ot">&lt;-</span> <span class="fu">scale</span>(x)</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>    <span class="fu">as.numeric</span>(<span class="fu">cut</span>(x, <span class="at">breaks =</span> <span class="fu">quantile</span>(x, <span class="at">probs =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="dv">8</span>)), </span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>                   <span class="at">labels =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>, <span class="at">include.lowest =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  }</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>  </span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>    <span class="at">SQ1 =</span> <span class="fu">latent_to_item</span>(Service_Quality, <span class="fl">0.82</span>), <span class="at">SQ2 =</span> <span class="fu">latent_to_item</span>(Service_Quality, <span class="fl">0.78</span>), <span class="at">SQ3 =</span> <span class="fu">latent_to_item</span>(Service_Quality, <span class="fl">0.74</span>),</span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a>    <span class="at">CS1 =</span> <span class="fu">latent_to_item</span>(Customer_Satisfaction, <span class="fl">0.80</span>), <span class="at">CS2 =</span> <span class="fu">latent_to_item</span>(Customer_Satisfaction, <span class="fl">0.76</span>), <span class="at">CS3 =</span> <span class="fu">latent_to_item</span>(Customer_Satisfaction, <span class="fl">0.72</span>),</span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>    <span class="at">CL1 =</span> <span class="fu">latent_to_item</span>(Customer_Loyalty, <span class="fl">0.81</span>), <span class="at">CL2 =</span> <span class="fu">latent_to_item</span>(Customer_Loyalty, <span class="fl">0.77</span>), <span class="at">CL3 =</span> <span class="fu">latent_to_item</span>(Customer_Loyalty, <span class="fl">0.73</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>  )</span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>}</span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a>simulated_data <span class="ot">&lt;-</span> <span class="fu">simulate_example_data</span>(<span class="dv">300</span>)</span></code></pre></div>
+</div>
+<div id="model-specification" class="section level2">
+<h2>2. Model Specification</h2>
+<p>The engine uses native R structures (lists and formulas) to define
+the model.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Define reflective blocks</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>measurement_model <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">Service_Quality =</span> <span class="fu">c</span>(<span class="st">&quot;SQ1&quot;</span>, <span class="st">&quot;SQ2&quot;</span>, <span class="st">&quot;SQ3&quot;</span>),</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">Customer_Satisfaction =</span> <span class="fu">c</span>(<span class="st">&quot;CS1&quot;</span>, <span class="st">&quot;CS2&quot;</span>, <span class="st">&quot;CS3&quot;</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">Customer_Loyalty =</span> <span class="fu">c</span>(<span class="st">&quot;CL1&quot;</span>, <span class="st">&quot;CL2&quot;</span>, <span class="st">&quot;CL3&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co"># Define structural paths using formulas</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>structural_model <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  Customer_Satisfaction <span class="sc">~</span> Service_Quality,</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  Customer_Loyalty <span class="sc">~</span> Customer_Satisfaction <span class="sc">+</span> Service_Quality</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="execution" class="section level2">
+<h2>3. Execution</h2>
+<p>The pls_sem() function executes the core algorithm, bootstrap, and
+predictive evaluation.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">pls_sem</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">data =</span> simulated_data,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">measurement_model =</span> measurement_model,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">structural_model =</span> structural_model,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">nboot =</span> <span class="dv">100</span>, <span class="co"># Using 100 for speed in this vignette</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">k =</span> <span class="dv">5</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>)</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; Warning: Negative Q²_predict detected: PLS-based predictions are outperformed</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; by the linear benchmark, indicating low predictive relevance (Shmueli et al.,</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; 2019).</span></span></code></pre></div>
+</div>
+<div id="results-inspection" class="section level2">
+<h2>4. Results Inspection</h2>
+<p>The results are organized into descriptive tables that match the
+manuscript’s structure.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Measurement Model</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>model<span class="sc">$</span>measurement_model</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt;               Construct Item Loading Composite Reliability (CR)  AVE   R2</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; 1      Customer_Loyalty  CL1    0.81                       0.85 0.65 0.32</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; 2      Customer_Loyalty  CL2    0.79                       0.85 0.65 0.32</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; 3      Customer_Loyalty  CL3    0.82                       0.85 0.65 0.32</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; 4 Customer_Satisfaction  CS1    0.83                       0.84 0.64 0.26</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; 5 Customer_Satisfaction  CS2    0.79                       0.84 0.64 0.26</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; 6 Customer_Satisfaction  CS3    0.77                       0.84 0.64 0.26</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; 7       Service_Quality  SQ1    0.88                       0.87 0.69   NA</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; 8       Service_Quality  SQ2    0.83                       0.87 0.69   NA</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; 9       Service_Quality  SQ3    0.78                       0.87 0.69   NA</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co"># Discriminant Validity</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>model<span class="sc">$</span>discriminant_validity</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; $HTMT</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;                       Service_Quality Customer_Satisfaction Customer_Loyalty</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; Service_Quality                    NA                  0.68             0.62</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; Customer_Satisfaction            0.68                    NA             0.70</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; Customer_Loyalty                 0.62                  0.70               NA</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; $HTMT2</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt;                       Service_Quality Customer_Satisfaction Customer_Loyalty</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; Service_Quality                    NA                  0.67             0.62</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; Customer_Satisfaction            0.67                    NA             0.70</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; Customer_Loyalty                 0.62                  0.70               NA</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co"># Structural Model</span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a>model<span class="sc">$</span>structural_model</span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt;                    From                    To Path Coefficient (β) CI_low</span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a><span class="co">#&gt; 1       Service_Quality Customer_Satisfaction                 0.51   0.43</span></span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a><span class="co">#&gt; 2 Customer_Satisfaction      Customer_Loyalty                 0.36   0.27</span></span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a><span class="co">#&gt; 3       Service_Quality      Customer_Loyalty                 0.28   0.17</span></span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a><span class="co">#&gt;   CI_high   f2</span></span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a><span class="co">#&gt; 1    0.58 0.35</span></span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="co">#&gt; 2    0.46 0.14</span></span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a><span class="co">#&gt; 3    0.39 0.09</span></span></code></pre></div>
+</div>
+<div id="interpretation" class="section level2">
+<h2>5. Interpretation</h2>
+<p>Factor loadings above 0.70 indicate acceptable indicator reliability.
+Structural path coefficients can be interpreted as standardized effects
+between constructs.</p>
+</div>
+<div id="advanced-features" class="section level2">
+<h2>6. Advanced Features</h2>
+<p>To address reviewer feedback, we include global fit indices and a
+bridge to CB-SEM.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Global Model Fit (SRMR, d_ULS, d_G)</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>model<span class="sc">$</span>diagnostics<span class="sc">$</span>global_fit</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;   Metric Value</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; 1   SRMR  0.09</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; 2  d_ULS  0.29</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; 3    d_G  0.63</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co"># Export to lavaan syntax</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="fu">export_lavaan_syntax</span>(measurement_model, structural_model)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; =================================================================</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt;  LAVAAN SYNTAX GENERATOR (CB-SEM / CFA Integration)</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;  Copy and paste this syntax to run models using the &#39;lavaan&#39; package.</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; =================================================================</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; # --- Measurement Model (CFA) ---</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; Service_Quality =~ SQ1 + SQ2 + SQ3</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; Customer_Satisfaction =~ CS1 + CS2 + CS3</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; Customer_Loyalty =~ CL1 + CL2 + CL3</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; # --- Structural Model ---</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; Customer_Satisfaction ~ Service_Quality</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt; Customer_Loyalty ~ Customer_Satisfaction + Service_Quality </span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt; =================================================================</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
