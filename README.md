@@ -1,7 +1,7 @@
 # PLSsemEngine: A Transparent PLS-SEM Engine in Base R 📊
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19120651.svg)](https://doi.org/10.5281/zenodo.19120651)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19870273.svg)](https://doi.org/10.5281/zenodo.19870273)
 
 [cite_start]**Version:** 1.2.0 (2026-04-25) 
 
@@ -90,7 +90,7 @@ Manuscript:
 Soto-Perez, M. (2026). A transparent PLSsemEngine for composite-based Mode A estimation of reflective models in R. SoftwareX. (Under review) .
 
 Software Archive:
-Soto-Perez, M. (2026). PLSsemEngine (Version 1.2.0). Zenodo. https://doi.org/10.5281/zenodo.19120651.
+Soto-Perez, M. (2026). PLSsemEngine (Version 1.2.0). Zenodo. https://doi.org/10.5281/zenodo.19870273.
 
 ✉️ Contact
 Dr. M. Soto-Perez Email: msoto@up.edu.mx 
